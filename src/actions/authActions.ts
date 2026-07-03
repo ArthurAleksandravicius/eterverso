@@ -16,6 +16,9 @@ const isPasswordValid = (password: string) => {
     return hasLowercase && hasUppercase && hasNumber && hasSpecial;
 }
 
+// Username: 3 a 20 caracteres, apenas letras, números, ponto, hífen e underscore
+const isUsernameValid = (username: string) => /^[a-zA-Z0-9_.-]{3,20}$/.test(username);
+
 // Action para logar
 export async function login(prevState: any, formData: FormData) {
     const supabase = await createClient()
@@ -62,6 +65,10 @@ export async function signup(prevState: any, formData: FormData) {
     // Verifica se os campos foram preenchidos
     if (!email || !password || !confirmPassword || !username) {
         return { error: "Todos os campos são obrigatórios." }
+    }
+
+    if (!isUsernameValid(username)) {
+        return { error: "O nome de usuário deve ter entre 3 e 20 caracteres, usando apenas letras, números, ponto, hífen ou underscore." }
     }
 
     if (password !== confirmPassword) {
