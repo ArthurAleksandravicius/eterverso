@@ -1,0 +1,43 @@
+@theme {
+  --color-brand-bg: #e8e8d8;
+  --color-brand-text: #333333;
+  --color-brand-link: #1a4a8a;
+  --color-brand-link-hover: #c04000;
+  --color-topbar-start: #3a5a9a;
+  --color-topbar-end: #1e3a6a;
+  --color-logobar-start: #2a4080;
+  --color-logobar-end: #1a2860;
+  --color-logo-text: #ffd700;
+
+  --color-panel-bg: #fdfdfd;
+  --color-panel-border: #99a;
+  --color-cat-header-bg: #d0d0c0;
+  --color-cat-header-border: #99a;
+  --color-table-header-bg: #b0c0d0;
+  --color-btn-primary: #2a3a60;
+  --color-btn-success: #28a745;
+  --color-btn-danger: #dc3545;
+}
+
+:root {
+  background-color: var(--color-brand-bg);
+  color: var(--color-brand-text);
+  font-family: Verdana, Geneva, sans-serif;
+  font-size: 13px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  color: var(--color-brand-link);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+a:hover {
+  text-decoration: underline;
+  color: var(--color-brand-link-hover);
+}
