@@ -1,18 +1,22 @@
+import "../app/style.css"
+
 type Props = {
     skill: {
-        name: string;
-        description: string;
+        nome: string;
+        descricao: string;
     }
 }
 
 export default function SkillCard({ skill }: Props) {
     return (
-        <div className="bg-white border border-[#283a60] p-[10px] text-[11px] leading-[1.6]">
+        <div className="bg-white h-[200px] border border-[#e6ebf5] border-2px border-l-[#283a60] border-l-4 p-[10px] text-[10px] leading-[1.6]
+                         overflow-y-scroll hover:text-white hover:bg-[#3c64a04f] transition-all
+                         rounded-sm hover:rounded-lg font-semibold shadow-md">
             <h4 className="m-0 mb-[5px] text-[#283a60] uppercase tracking-wide text-[12px] font-bold">
-                {skill.name}
+                {skill.nome}
             </h4>
             <div className="text-[#444]">
-                {skill.description}
+                {skill.descricao}
             </div>
         </div>
     );

@@ -22,7 +22,7 @@ export default function CommentsSection({ personagemId, isLoggedIn, comments }: 
     const formRef = useRef<HTMLFormElement>(null);
 
     return (
-        <div className="mt-6 border border-[#aab7d3] bg-[#f0f4f8] rounded-sm">
+        <div className="w-full mt-6 border border-[#aab7d3] bg-[#f0f4f8] rounded-sm">
             <div className="bg-[#1f3765] text-[#ffcc00] font-bold py-[4px] px-[10px] text-[13px]">
                 Comentários ({comments.length})
             </div>
@@ -55,7 +55,7 @@ export default function CommentsSection({ personagemId, isLoggedIn, comments }: 
                 )}
 
                 {isLoggedIn ? (
-                    <form 
+                    <form
                         ref={formRef}
                         action={async (formData) => {
                             await postComment(formData);
@@ -65,7 +65,7 @@ export default function CommentsSection({ personagemId, isLoggedIn, comments }: 
                     >
                         <input type="hidden" name="personagemId" value={personagemId} />
                         <h4 className="text-[13px] font-bold text-[#333] m-0 mb-2">Adicionar um comentário</h4>
-                        <textarea 
+                        <textarea
                             name="content"
                             required
                             className="w-full border border-[#ccc] p-2 text-[12px] h-[80px] resize-y mb-2 focus:outline-none focus:border-[#1f3765]"

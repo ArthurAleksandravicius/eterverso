@@ -52,12 +52,12 @@ export default function ApexScaleChart({ stats }: Props) {
     const dataPath = dataPoints.map((p, i) => (i === 0 ? `M ${p.x},${p.y}` : `L ${p.x},${p.y}`)).join(' ') + ' Z';
 
     return (
-        <div className="bg-[#f0f4f8] border border-[#aab7d3] rounded-sm overflow-hidden mt-4">
+        <div className="bg-[#f0f4f8] w-full border border-[#aab7d3] rounded-sm overflow-hidden mt-4">
             <div className="bg-[#1f3765] text-[#ffcc00] font-bold py-[4px] px-[10px] text-[13px]">
                 Apex Scale
             </div>
 
-            <div className="flex flex-col md:flex-row p-4 gap-6 items-center justify-center">
+            <div className="flex flex-col justify-around md:flex-row p-4 gap-6 items-center">
                 <div className="relative shrink-0" style={{ width: size, height: size }}>
                     <div className="absolute inset-0 rounded-full bg-linear-to-br from-white to-[#d4dbe4] shadow-inner" style={{ transform: 'scale(1.05)' }}></div>
 
@@ -93,7 +93,7 @@ export default function ApexScaleChart({ stats }: Props) {
                 </div>
 
                 {/* Barras de progresso */}
-                <div className="flex-1 flex flex-col gap-[6px] min-w-[200px]">
+                <div className="flex-1 flex flex-col gap-[6px] max-w-[50%] min-w-[200px]">
                     {STAT_LABELS.map((stat, i) => (
                         <div key={stat.key} className="flex items-center gap-3">
                             <div className="w-[30px] text-right shrink-0">

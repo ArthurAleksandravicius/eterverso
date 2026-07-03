@@ -1,6 +1,6 @@
 'use client'
 
-import { signup } from "@/actions/authActionts";
+import { signup } from "@/actions/authActions";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { useActionState, useEffect, useRef, useState } from "react";
 

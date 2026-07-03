@@ -19,6 +19,11 @@
   --color-btn-danger: #dc3545;
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, .3) transparent;
+}
+
 :root {
   background-color: var(--color-brand-bg);
   color: var(--color-brand-text);
