@@ -46,14 +46,14 @@ export default function CharacterCard({ personagem: p }: Props) {
     const wa = calculateWa(p.stats);
 
     return (
-        <div className="w-[250px] shrink-0 sticky top-4 self-start bg-[#f1f0e4] border-2 border-[#1f3765] rounded-sm shadow-md overflow-hidden font-sans">
-            <Link href={`/wiki/${p.id}`}>
+        <div className="w-full max-w-[250px] h-[550px] flex flex-col shrink-0 sticky top-4 self-start bg-[#f1f0e4] border-2 border-[#1f3765] rounded-sm shadow-md font-sans">
+            <Link href={`/wiki/${p.id}`} className="h-max hover:no-underline">
                 <div className="bg-[#1f3765] text-[#ffcc00] font-bold text-center py-2 text-[14px] border-b border-[#1f3765]">
                     {p.nome}
                 </div>
                 <div className="p-[10px] bg-white border-b border-[#1f3765] flex justify-center">
                     {p.imagem ? (
-                        <img src={p.imagem} alt={p.nome} className="max-w-full h-auto border border-[#ccc]" />
+                        <img src={p.imagem} alt={p.nome} className="max-w-full aspect-square object-contain object-center border border-[#ccc]" />
                     ) : (
                         <div className="w-[200px] h-[300px] bg-[#ddd] flex items-center justify-center text-[48px] text-white">
                             {p.nome.substring(0, 1)}
@@ -62,7 +62,7 @@ export default function CharacterCard({ personagem: p }: Props) {
                 </div>
             </Link>
 
-            <div className="p-[12px] text-[12px] text-[#333] leading-[1.6] bg-[#fdfdfc]">
+            <div className="flex-1 flex flex-col justify-between p-[10px] text-[12px] text-[#333] leading-[1.6] bg-[#fdfdfc]">
                 <div className="grid grid-cols-[60px_1fr] gap-x-2">
                     <span className="font-bold text-[#111]">Título:</span>
                     <span>{p.titulo || 'Nenhum'}</span>

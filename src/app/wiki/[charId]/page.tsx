@@ -39,7 +39,7 @@ export default async function CharacterView({ params }: { params: Promise<{ char
     .orderBy(desc(comments.createdAt));
 
   const stats = (p.stats || {}) as any;
-  const skills = (Array.isArray(p.skills) ? p.skills : []) as { name: string, description: string }[];
+  const skills = (Array.isArray(p.skills) ? p.skills : []) as { nome: string, descricao: string }[];
 
   return (
     <>
@@ -49,43 +49,44 @@ export default async function CharacterView({ params }: { params: Promise<{ char
         {p.nome}
       </div>
 
-      <div className="flex gap-[15px] items-start relative">
-        <CharacterCard personagem={p} />
+      <div className="flex flex-col gap-[15px] items-start relative">
+        <div className="flex gap-[15px] w-full items-center align-center">
+          <CharacterCard personagem={p} />
 
-        <div className="flex-1 bg-white border border-panel-border p-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+          <div className="flex-1 bg-white border border-panel-border p-[20px] shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
 
-          <h2 className="text-[20px] font-serif font-bold text-[#111] m-0 mb-[15px] border-b border-[#ddd] pb-[5px]">
-            Biografia
-          </h2>
+            <h2 className="text-[20px] font-serif font-bold text-[#111] m-0 mb-[15px] border-b border-[#ddd] pb-[5px]">
+              Biografia
+            </h2>
 
-          <div className="text-[13px] text-[#333] leading-[1.7] mb-8">
-            {parse(p.descricao || 'Nenhuma biografia fornecida.')}
-          </div>
-
-          {skills.length > 0 && (
-            <div className="mb-8">
-              <div className="bg-[#1f3765] text-[#ffcc00] font-bold py-[4px] px-[10px] text-[13px] mb-4 border border-[#1f3765] rounded-sm">
-                Skills
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-                {skills.map((s, i) => (
-                  <SkillCard key={i} skill={s} />
-                ))}
-              </div>
+            <div className="text-[13px] text-[#333] leading-[1.7] mb-8">
+              {parse(p.descricao || 'Nenhuma biografia.')}
             </div>
-          )}
-
-          {Object.keys(stats).length > 0 && (
-            <ApexScaleChart stats={stats} />
-          )}
-
-          <CommentsSection
-            personagemId={charId}
-            isLoggedIn={isLoggedIn}
-            comments={charComments}
-          />
-
+          </div>
         </div>
+
+        {skills.length > 0 && (
+          <div className="mb-8 w-full">
+            <div className="bg-[#1f3765] text-[#ffcc00] font-bold py-[4px] px-[10px] text-[13px] mb-4 border border-[#1f3765] rounded-sm">
+              Skills
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+              {skills.map((s, i) => (
+                <SkillCard key={i} skill={s} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {Object.keys(stats).length > 0 && (
+          <ApexScaleChart stats={stats} />
+        )}
+
+        <CommentsSection
+          personagemId={charId}
+          isLoggedIn={isLoggedIn}
+          comments={charComments}
+        />
       </div>
     </>
   );
