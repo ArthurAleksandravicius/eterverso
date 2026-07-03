@@ -1,5 +1,5 @@
 import Button from '@/components/Button';
-import ThreadRow from '@/components/ThreadRow';
+import ThreadItem from '@/components/ThreadItem';
 import ThreadSortUI from '@/components/ThreadSortUI';
 import { db } from '@/db';
 import { categories, threads, users, posts } from '@/db/schema';
@@ -57,7 +57,6 @@ export default async function CategoryView({ params, searchParams }: { params: P
     return 0;
   });
 
-  // Retorna o html do componente de categoria
   return (
     <div>
       <div className="text-[11px] font-bold text-[#666] mb-[10px]">
@@ -84,7 +83,7 @@ export default async function CategoryView({ params, searchParams }: { params: P
           {/* Renderiza os tópicos na categoria */}
           {sortedThreads.map(thread => {
             return (
-              <ThreadRow key={thread.id} thread={thread} />
+              <ThreadItem key={thread.id} thread={thread} />
             );
           })}
           {/* Exibe que nao há tópicos, caso nao haja */}

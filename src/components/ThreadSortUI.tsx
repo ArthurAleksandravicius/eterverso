@@ -2,14 +2,17 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 
+// Componente das threads em ordem da respectiva categoria
 export default function ThreadSortUI() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
+  // obtem os parametros de filter
   const currentSort = searchParams.get('sort') || 'lastPost';
   const currentDir = searchParams.get('dir') || 'desc';
 
+  // atualiza os parametros quando alterados
   const updateSort = (sort: string, dir: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('sort', sort);
@@ -20,8 +23,8 @@ export default function ThreadSortUI() {
   return (
     <div className="bg-[#f9f9f9] border border-panel-border p-[8px] mb-[10px] flex gap-[10px] items-center text-[12px]">
       <span className="font-bold text-[#555]">Ordenar por:</span>
-      <select 
-        value={currentSort} 
+      <select
+        value={currentSort}
         onChange={(e) => updateSort(e.target.value, currentDir)}
         className="border border-[#ccc] p-[2px] text-[12px]"
       >
@@ -31,13 +34,13 @@ export default function ThreadSortUI() {
         <option value="views">Visualizações</option>
       </select>
 
-      <select 
-        value={currentDir} 
+      <select
+        value={currentDir}
         onChange={(e) => updateSort(currentSort, e.target.value)}
         className="border border-[#ccc] p-[2px] text-[12px]"
       >
-        <option value="desc">Decrescente (Z-A / Mais Novos)</option>
-        <option value="asc">Crescente (A-Z / Mais Antigos)</option>
+        <option value="desc">Decrescente</option>
+        <option value="asc">Crescente</option>
       </select>
     </div>
   );

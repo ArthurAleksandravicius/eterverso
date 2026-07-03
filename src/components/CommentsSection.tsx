@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useRef } from 'react';
-import { postComment } from '@/actions/commentActions';
+import React, { useRef, useActionState, useEffect } from 'react';
+import { postComment, type CommentActionState } from '@/actions/commentActions';
 import Button from './Button';
 
 type Props = {
@@ -18,8 +18,17 @@ type Props = {
     }[];
 };
 
+const initialState: CommentActionState = { success: false };
+
 export default function CommentsSection({ personagemId, isLoggedIn, comments }: Props) {
     const formRef = useRef<HTMLFormElement>(null);
+    const [state, formAction, isPending] = useActionState(postComment, initialState);
+
+    useEffect(() => {
+        if (state.success) {
+            formRef.current?.reset();
+        }
+    }, [state]);
 
     return (
         <div className="w-full mt-6 border border-[#aab7d3] bg-[#f0f4f8] rounded-sm">
@@ -57,25 +66,31 @@ export default function CommentsSection({ personagemId, isLoggedIn, comments }: 
                 {isLoggedIn ? (
                     <form
                         ref={formRef}
-                        action={async (formData) => {
-                            await postComment(formData);
-                            formRef.current?.reset();
-                        }}
+                        action={formAction}
                         className="bg-white p-3 border border-[#ccc]"
                     >
                         <input type="hidden" name="personagemId" value={personagemId} />
                         <h4 className="text-[13px] font-bold text-[#333] m-0 mb-2">Adicionar um comentário</h4>
+
+                        {state.error && (
+                            <div className="bg-[#f8d7da] border border-[#f5c6cb] text-[#721c24] p-2 text-[12px] rounded-sm mb-2">
+                                {state.error}
+                            </div>
+                        )}
+
                         <textarea
                             name="content"
                             required
                             className="w-full border border-[#ccc] p-2 text-[12px] h-[80px] resize-y mb-2 focus:outline-none focus:border-[#1f3765]"
                             placeholder="Escreva seu comentário..."
                         ></textarea>
-                        <Button type="submit">Enviar Comentário</Button>
+                        <Button type="submit" disabled={isPending}>
+                            {isPending ? 'Enviando...' : 'Enviar Comentário'}
+                        </Button>
                     </form>
                 ) : (
                     <div className="bg-[#fff3cd] border border-[#ffeeba] text-[#856404] p-3 text-[12px] rounded-sm">
-                        Você precisa estar logado para comentar.
+                        Faça login para comentar
                     </div>
                 )}
             </div>

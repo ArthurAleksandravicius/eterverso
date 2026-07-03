@@ -1,12 +1,8 @@
 import type { Metadata } from 'next';
 
 import './index.css';
-import { db } from '@/db';
-import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { logout } from '@/actions/authActions';
-import { createClient } from '@/utils/supabase/server';
 import { getCurrentUser } from '@/utils/auth';
 import { UserProvider } from '@/context/UserContext';
 import Button from '@/components/Button';

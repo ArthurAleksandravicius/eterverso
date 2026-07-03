@@ -25,6 +25,7 @@ export default function UserCard({ author }: Props) {
             {author?.avatar ? (
                 <img src={author.avatar} alt="Avatar" className="w-[150px] max-w-full border border-[#999] p-[2px] bg-white mt-[5px]" />
             ) : (
+                // colocar aqui foto default
                 <div className="w-[100px] h-[100px] bg-[#e0e0e0] border border-[#ccc] mx-auto mt-[5px] flex items-center justify-center text-[#aaa]">Sem Avatar</div>
             )}
             <div className="mt-[10px] text-[10px] text-[#555]">

@@ -1,7 +1,10 @@
 'use client'
 
 import { signup } from "@/actions/authActions";
+import { useUser } from "@/context/UserContext";
+
 import HCaptcha from "@hcaptcha/react-hcaptcha";
+import { redirect } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 
 const initialState = {
@@ -12,8 +15,10 @@ export default function Signup() {
     const [state, formAction, pending] = useActionState(signup, initialState)
     const [captchaToken, setCaptchaToken] = useState("")
     const captcha = useRef<HCaptcha>(null)
+    const user = useUser()
 
     useEffect(() => {
+        if (user) redirect('/')
         if (!pending && state.error && captcha.current)
             captcha.current.resetCaptcha()
     }, [pending, state.error])

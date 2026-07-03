@@ -12,7 +12,7 @@ type Props = {
     }
 }
 
-// Tags que nunca devem chegar ao DOM a partir de conteúdo de usuário
+// tags que users não devem poder inserir em posts
 const BLOCKED_TAGS = new Set(['script', 'style', 'iframe', 'frame', 'object', 'embed', 'form', 'link', 'meta', 'base']);
 const URL_ATTRS = new Set(['href', 'src', 'xlink:href', 'action', 'formaction', 'poster']);
 
@@ -23,7 +23,7 @@ const isUnsafeUrl = (value: string) => {
         || (url.startsWith('data:') && !url.startsWith('data:image/'));
 }
 
-// Remove tags perigosas, atributos de evento (on*) e URLs com esquemas executáveis
+// Sanitiza o html
 const sanitizeOptions: HTMLReactParserOptions = {
     replace(node) {
         if (!(node instanceof Element)) return;

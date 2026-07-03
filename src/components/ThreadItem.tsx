@@ -16,7 +16,8 @@ type Props = {
     }
 }
 
-export default async function ThreadRow({ thread }: Props) {
+// Componente das threads 
+export default async function ThreadItem({ thread }: Props) {
     const author = await db.select().from(users).where(eq(users.id, thread.authorId)).then(res => res[0])
     const threadPosts = await db.select().from(posts).where(eq(posts.threadId, thread.id)).then(res => res.length)
     const replies = Math.max(0, threadPosts - 1);

@@ -16,7 +16,7 @@ const isPasswordValid = (password: string) => {
     return hasLowercase && hasUppercase && hasNumber && hasSpecial;
 }
 
-// Username: 3 a 20 caracteres, apenas letras, números, ponto, hífen e underscore
+// 3 a 20 caracteres, somente letras, números, ponto, traço e underline
 const isUsernameValid = (username: string) => /^[a-zA-Z0-9_.-]{3,20}$/.test(username);
 
 // Action para logar
@@ -68,7 +68,7 @@ export async function signup(prevState: any, formData: FormData) {
     }
 
     if (!isUsernameValid(username)) {
-        return { error: "O nome de usuário deve ter entre 3 e 20 caracteres, usando apenas letras, números, ponto, hífen ou underscore." }
+        return { error: "O nome de usuário deve ter entre 3 e 20 caracteres, usando apenas letras, números, ponto, hífen ou underline." }
     }
 
     if (password !== confirmPassword) {
@@ -107,7 +107,7 @@ export async function signup(prevState: any, formData: FormData) {
         return { error: error.message }
     }
 
-    redirect('/auth/login')
+    redirect('/')
 }
 
 // Action para fazer logout

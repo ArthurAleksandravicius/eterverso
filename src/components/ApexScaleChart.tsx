@@ -79,9 +79,8 @@ export default function ApexScaleChart({ stats }: Props) {
                             <circle key={`dot-${i}`} cx={p.x} cy={p.y} r="3" fill="#1f3765" />
                         ))}
 
-                        {/* Draw labels */}
                         {angles.map((angle, i) => {
-                            const p = getCoordinatesForAngle(angle, maxRadius + 20); // Push labels out
+                            const p = getCoordinatesForAngle(angle, maxRadius + 20);
                             return (
                                 <g key={`label-${i}`} transform={`translate(${p.x}, ${p.y})`}>
                                     <text textAnchor="middle" y="-4" className="text-[12px] font-bold fill-[#1f3765]">{STAT_LABELS[i].kanji}</text>
