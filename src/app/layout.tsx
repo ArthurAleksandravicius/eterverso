@@ -6,7 +6,7 @@ import { logout } from '@/actions/authActions';
 import { getCurrentUser } from '@/utils/auth';
 import { UserProvider } from '@/context/UserContext';
 import Button from '@/components/Button';
-
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: 'Éterverso',
@@ -106,6 +106,7 @@ export default async function RootLayout({
           </div>
 
           <div id="modal-container"></div>
+          <Toaster richColors position="top-right" />
         </UserProvider>
       </body>
     </html>

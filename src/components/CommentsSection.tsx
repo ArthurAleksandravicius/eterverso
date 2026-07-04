@@ -3,6 +3,7 @@
 import React, { useRef, useActionState, useEffect } from 'react';
 import { postComment, type CommentActionState } from '@/actions/commentActions';
 import Button from './Button';
+import { toast } from 'sonner';
 
 type Props = {
     personagemId: string;
@@ -27,6 +28,9 @@ export default function CommentsSection({ personagemId, isLoggedIn, comments }: 
     useEffect(() => {
         if (state.success) {
             formRef.current?.reset();
+            toast.success("Comentário adicionado com sucesso!");
+        } else if (state.error) {
+            toast.error(state.error);
         }
     }, [state]);
 
@@ -63,6 +67,8 @@ export default function CommentsSection({ personagemId, isLoggedIn, comments }: 
                     <div className="text-[#666] text-[12px] italic mb-6">Nenhum comentário ainda.</div>
                 )}
 
+
+                {/* Exibe o form de comentário se o user tiver logado */}
                 {isLoggedIn ? (
                     <form
                         ref={formRef}
@@ -71,12 +77,6 @@ export default function CommentsSection({ personagemId, isLoggedIn, comments }: 
                     >
                         <input type="hidden" name="personagemId" value={personagemId} />
                         <h4 className="text-[13px] font-bold text-[#333] m-0 mb-2">Adicionar um comentário</h4>
-
-                        {state.error && (
-                            <div className="bg-[#f8d7da] border border-[#f5c6cb] text-[#721c24] p-2 text-[12px] rounded-sm mb-2">
-                                {state.error}
-                            </div>
-                        )}
 
                         <textarea
                             name="content"

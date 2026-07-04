@@ -6,6 +6,7 @@ import { useUser } from "@/context/UserContext";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { redirect } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 const initialState = {
     error: null as string | null
@@ -21,20 +22,15 @@ export default function Signup() {
         if (user) redirect('/')
         if (!pending && state.error && captcha.current)
             captcha.current.resetCaptcha()
-    }, [pending, state.error])
+
+        if (state.error && !pending) {
+            toast.error(state.error)
+        }
+    }, [pending, state.error, user])
 
     return (
         <div className="max-w-md mx-auto">
             <h2>Cadastrar-se</h2>
-
-            {/*Mensagem de erro, caso haja*/}
-            {
-                state.error && (
-                    <div className="bg-[#f8d7da] text-[#721c24] p-3 mb-4 border border-[#f5c6cb] rounded text-sm">
-                        {state.error}
-                    </div>
-                )
-            }
 
             {/* Formulário para a ação de cadastrar usuário */}
             <form action={formAction} className="flex flex-col gap-4">

@@ -11,7 +11,7 @@ export type CommentActionState = {
 
 export async function postComment(_prevState: CommentActionState, formData: FormData): Promise<CommentActionState> {
     try {
-        const user = await getCurrentUser();
+        const user = await getCurrentUser()
         if (!user) {
             return { success: false, error: "Você precisa estar logado para comentar." };
         }
@@ -36,7 +36,8 @@ export async function postComment(_prevState: CommentActionState, formData: Form
         revalidatePath(`/wiki/${personagemId}`);
         return { success: true };
     } catch (e) {
-        console.error("postComment error:", e);
+        console.log(e);
+
         return { success: false, error: "Ocorreu um erro ao enviar o comentário. Tente novamente." };
     }
 }

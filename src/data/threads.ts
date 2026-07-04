@@ -17,7 +17,12 @@ type CreateThreadInput = z.infer<typeof createThreadSchema>
 // Função para acionar a ação de criar tópico no banco de dados
 export async function createThread(data: CreateThreadInput) {
     // Insere a thread no banco de dados
-    const [newThread] = await db.insert(threads).values(data).returning()
+    const parsed = createThreadSchema.safeParse(data)
+
+    if (!parsed.success) {
+        return { error: parsed.error.issues[0]?.message || "Dados inválidos." }
+    }
+    const [newThread] = await db.insert(threads).values(parsed.data).returning()
 
     await db.insert(posts).values({
         threadId: newThread.id,

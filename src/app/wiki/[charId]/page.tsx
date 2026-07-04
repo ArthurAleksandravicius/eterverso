@@ -1,6 +1,5 @@
 import NotFound from '@/app/not-found';
 import { db } from '@/db';
-import { getCurrentUser } from '@/utils/auth';
 import { personagens, comments, users } from '@/db/schema';
 import SkillCard from '@/components/SkillCard';
 import CharacterCard from '@/components/CharacterCard';
@@ -10,6 +9,7 @@ import CommentsSection from '@/components/CommentsSection';
 import { eq, desc } from 'drizzle-orm';
 import Link from 'next/link';
 import parse from 'html-react-parser';
+import { getCurrentUser } from '@/utils/auth';
 
 // Componente para exibir as informações do personagem selecionado na wiki
 export default async function CharacterView({ params }: { params: Promise<{ charId: string }> }) {
@@ -21,7 +21,7 @@ export default async function CharacterView({ params }: { params: Promise<{ char
   if (!p) return <NotFound />
 
   // Verifica se está logado
-  const user = await getCurrentUser();
+  const user = getCurrentUser()
   const isLoggedIn = !!user;
 
   // Obtém comentários com dados do autor
