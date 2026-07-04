@@ -21,8 +21,8 @@ export default async function CharacterView({ params }: { params: Promise<{ char
   if (!p) return <NotFound />
 
   // Verifica se está logado
-  const user = getCurrentUser()
-  const isLoggedIn = !!user;
+  const user = await getCurrentUser();
+  const isLoggedIn = user !== null;
 
   // Obtém comentários com dados do autor
   const charComments = await db.select({
