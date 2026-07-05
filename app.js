@@ -57,100 +57,30 @@ var DB = {
 
   personagens: [
     {
-      id: 1,
-      nome: 'Shin Hae',
-      categoria: 'Personagem Principal',
-      titulo: '',
-      raca: 'Néfilim',
-      faccao: 'Clã Myung-Jin',
-      status: 'Vivo',
-      imagem: 'https://i.pinimg.com/1200x/0c/0c/f4/0c0cf480011fd28dcd724588d0cbd5ee.jpg',
-      descricao: '<h3>Biografia</h3>' +
-        '<p>Shin Hae é um jovem néfilim em busca de vingança. Ou, respostas. Suas Marcas despertaram verdadeiramente após a morte de sua amada. Antes, ele conseguia fazer fogo a bel prazer, hoje é um vulcão humano. Shin possui um transtorno de vazio identitário fundacional. Ele se baseia na personalidade de seus queridos companheiros, como Akane e a casca-vazia que se tornou Zeratsu.</p>' +
-        '<p>Graças ao Rosey, Shin Hae possui um grande senso de depender de estrutura militar, e é por isso que se aproximou de Akane, que ao menos, tenta simular essa dinâmica. Ayumi Hajiwara o amou por quem ele era, e não pelo que ele produzia. Ela se tornou, para Shin, um símbolo de verdade de identidade.</p>' +
-        '<p>Depois de anos vivendo num ambiente hermético, hierárquico e vigiado, Shin teve seu primeiro contato com Yuna, através do Reddit. Uma jovem de vinte e poucos anos, com ligação aos povos indígenas. O povo de Yuna categorizava os portais e espectros de outra forma, até aprendendo a viver em comunhão com eles. Nessa viagem, ele conheceu Akane e se tornou pupilo dela. Meses depois, descobriu da conexão dela com Zeratsu.</p>' +
-        '<p>Meses depois, Shin voltou ao Brasil com Akane, em uma missão, rastrear uma rede de contrabando de artefatos paranormais que escoava pelo Atlântico Sul. A rota de ambos os levou aos cantos mais escuros de Manáus, depois afluentes do Rio Negro. Lá, conheceram o povo Tikuna, os Baniwa e os Yanomami.</p>' +
-        '<p>Ao retornar pro Japão, Shin se aliou a grupos revolucionários como os Orácion Seis, uma organização formada por seis mentalistas, mas que foram traídos por um que superou todos os outros; também andou com outra organização chamada Lâminas de Manticora. Atualmente, Shin está em busca da Demon Blade, artefato sagrado de seu clã que demonstra legitimidade, e a Armadura de Atikaya.</p>' +
-        '<h3>Myung-Jin Clan</h3>' +
-        '<p>The Myung-Jin Clan (明真, "Illuminated Truth") is a millennia-old shamanic-mediator lineage that has adopted the structure and vocabulary of modern corporate governance without abandoning its original internal organization, which remains divided into three institutional tiers. The <b>Bon-ga</b> (Root House), headquartered in Seoul, functions as the clan\'s central governing body, serving as custodian of the foundational artifacts and holding final arbitral authority over all subordinate divisions. The <b>Jong-ga</b> (Intermediate Chambers) oversee the clan\'s visible corporate sectors, operating as the administrative link between central leadership and regional units. The <b>Bun-ga</b> (Peripheral Cells), dispersed throughout Asia, are responsible for older and more localized practices such as exorcism and spiritual mediation — it is from this category that Shin\'s cell of origin descends.</p>' +
-        '<p>The clan maintains an operational network of cells spanning Korea, Japan, China, Southeast Asia, and Central Asia. Unlike conventional corporate structures, cohesion among these units is not based on hierarchical subordination but on ritual and karmic bonds, which constitute the clan\'s true mechanism of institutional unity. Shin\'s cell of origin is characterized by its peripheral and traditionalist profile, a factor that directly accounts for her early exile: a child bearing an uncategorizable gift was regarded as an institutional liability by a cell that considers itself the guardian of doctrinal purity within the tradition.</p>' +
-        '<p>Following the death of the Bon-ga\'s leader without a clearly designated successor, the Conclave of Proven-Merit Succession was formally activated, initiating a succession dispute between Shin Hae and Kael for leadership of the Root House.</p>' +
-        '<h3>Habilidades — Marcas dos Pecados</h3>' +
-        '<h4>Veneno da Ira</h4>' +
-        '<p>Da ignorância, nasce o veneno da aversão, cuja forma mais violenta é a ira. Aqueles que morrem com vidas marcadas por atos de profunda aversão — crueldade, malícia, ira paranoica — tendem ao inferno, onde sofrem tormentos profundos condicionados por seus próprios atos e que, através de trauma que reflete seus próprios pecados, purifica tais más inclinações.</p>' +
-        '<p>Ao despertar o Veneno da Ira, Shin obteve a capacidade de manifestar as chamas do inferno: um fogo rubro como o pôr do Sol, imbuído de um único efeito paradoxal de negar consumindo. Em contato com algo, estas chamas reagem com aquilo degradando o alvo, mas no processo, assim como fogo que consome certos sais ganha uma cor própria, evoluem de forma transversal ao alvo, se tornando mais capazes de queimar aquele exato combustível, ao passo que o alvo em questão, ao ser degradado, se torna cada vez mais vulnerável. Assim, as chamas infernais possuem uma eficiência de éter incrível e crescente com o contato ao alvo, que é desnaturado e se torna cada vez mais frágil e suscetível. Os subprodutos das chamas podem também alimentar as Demon Cells de Shin, tal como as chamas podem aprimorar esse processo absorvendo anticorpos gerados pelas DCs, em um processo recíproco.</p>' +
-        '<blockquote><i>Que as chamas do inferno queimem todas as máculas das almas vis o bastante para lá cair.</i></blockquote>' +
-        '<h3>Skills</h3>' +
-        '<div class="skill-grid">' +
-        '<div class="skill-item"><h4>Magma Mantle</h4><p>Undocumented.</p></div>' +
-        '<div class="skill-item"><h4>Roar of Igneous Ether</h4><p>Shin exhales a stream of Ether condensed into magma. The stream has mass, causing both impact and burn damage. On contact with the ground it spreads and hardens within seconds, trapping anything inside the affected area. Output can be shaped wide, to cover an area, or narrowed into a high-penetration projectile.</p></div>' +
-        '<div class="skill-item"><h4>Ether Rasengan</h4><p>Shin concentrates Ether into a spinning sphere of magma in his palm. The rotation causes simultaneous abrasion and burn damage on contact. It forms in under a second, and its size increases with the amount of Ether used. Signature technique.</p></div>' +
-        '<div class="skill-item"><h4>Basalt Chains</h4><p>Shin projects threads of igneous Ether that harden into chains. They restrain targets, restrict movement, and can anchor objects in place. The core remains molten and continues to burn after hardening. Can be attached to his other long-range techniques to alter their trajectory mid-flight.</p></div>' +
-        '<div class="skill-item"><h4>Fission Spear</h4><p>Shin gathers Ether into a sharpened point with a hardened shell and a molten core, then drives it into the target. The shell handles penetration; the heated core cauterizes and expands inside the wound afterward.</p></div>' +
-        '<div class="skill-item"><h4>Ether Scales</h4><p>Shin solidifies his Ether aura into overlapping plates, increasing defense and melee damage output. Coverage can be full-body or partial. Contact with the plates causes burns from residual heat. The heavy configuration reduces mobility in exchange for higher defense; the light configuration preserves mobility with less defense. He can switch between the two instantly.</p></div>' +
-        '<div class="skill-item"><h4>Ether Tide</h4><p>Shin converts the surrounding terrain into an advancing wave of lava that causes burn and impact damage. It hardens after a few seconds, trapping anyone caught inside. Used for area control against multiple targets.</p></div>' +
-        '<div class="skill-item"><h4>Haste Seal</h4><p>A seal that accelerates biological and chemical processes in the target. On an ally, this increases reaction speed and healing rate. Used on an enemy, it accelerates fatigue and oxidation instead.</p></div>' +
-        '<div class="skill-item"><h4>Delay Seal</h4><p>A seal that slows biological and physical processes in the target. Movement, reaction time, and technique charge time are all reduced. It is not paralysis — the target retains full control, just at reduced speed.</p></div>' +
-        '<div class="skill-item"><h4>Instant Corrosion</h4><p>Accelerates oxidation and wear on inert objects: weapons rust to dust, walls crumble, ropes rot. Limited to non-living matter.</p></div>' +
-        '<div class="skill-item"><h4>Stasis Seal</h4><p>Slows a targeted process to near zero, halting its progression without ending it. Can stop bleeding, suspend the spread of a toxin, or hold a charged technique in reserve. Used to stabilize allies or store an effect for later use.</p></div>' +
-        '<div class="skill-item"><h4>Slow Wall</h4><p>A stationary field that drastically reduces the speed of anything that enters it, including incoming projectiles. It does not block attacks; it removes their velocity.</p></div>' +
-        '<div class="skill-item"><h4>Stolen Momentum Spear</h4><p>Shin slows an incoming attack and redirects the velocity removed from it into an accelerated counter-attack. The speed of the original attack determines the strength of the counter.</p></div>' +
-        '<div class="skill-item"><h4>Differential Field</h4><p>Shin divides an area into accelerated zones, which increase ally speed, and decelerated zones, which reduce enemy speed. Shin is unaffected by either zone.</p></div>' +
-        '<div class="skill-item"><h4>Absolute Refraction</h4><p>Shin alters the local permittivity of Ether (ε₀), changing the refractive index of the surrounding space. This can bend light around him for invisibility, deflect beams and projectiles, create visual mirages, or slow light enough to produce a static afterimage. Because the effect acts on the medium rather than the attack, it cannot be countered with force.</p></div>' +
-        '<div class="skill-item"><h4>Electromagnetic Veto</h4><p>By altering Ether\'s permeability (μ₀), Shin weakens or suppresses electromagnetic field propagation in a region. This disrupts conduction, electric and magnetic-based techniques, and electronic devices within the affected area.</p></div>' +
-        '<div class="skill-item"><h4>Law of Mass</h4><p>Shin manipulates the Ether field responsible for a target\'s inertial mass. He can reduce a target\'s mass close to zero, limiting its ability to generate force, or increase it to an extreme degree, restricting its movement under its own weight. The effect targets mass directly rather than the target\'s physical structure.</p></div>' +
-        '<div class="skill-item"><h4>Casimir Pressure</h4><p>Shin arranges boundary conditions in the Ether so that vacuum zero-point energy produces a measurable force. This generates a push or crushing effect without a projectile or visible point of origin.</p></div>' +
-        '<div class="skill-item"><h4>Zero-Point Well</h4><p>Shin draws energy directly from vacuum fluctuations. While active, his techniques do not draw from his personal energy reserve, removing fatigue as a limiting factor.</p></div>' +
-        '<div class="skill-item"><h4>Ether Gravitational Lens</h4><p>By condensing Ether into a point, Shin creates a field that bends nearby trajectories, including projectiles, light, and physical bodies. He can redirect incoming attacks away from allies, hold a target inside a pulling field, or concentrate energy at a single point.</p></div>' +
-        '<div class="skill-item"><h4>Flow Zero Point</h4><p>Shin halts nearly all processes in a single target, including aging, movement, casting, healing, and decay. Only Shin can release the effect. The technique uses nearly all of his energy reserve and can only affect one target at a time.</p></div>' +
-        '<div class="skill-item"><h4>False Vacuum</h4><p>Shin triggers a localized vacuum collapse inside an expanding field, shifting the local Ether constants to a lower-energy state. Inside the field, molecular and structural bonds weaken, causing matter and active effects to break down. The effect targets ambient conditions rather than the target directly. It is difficult to control and leaves Shin fully depleted afterward.</p></div>' +
-        '<div class="skill-item"><h4>Imposed Heat Death</h4><p>A combined technique. Shin saturates the target with igneous Ether at maximum concentration while simultaneously accelerating entropy in the same area using Maxwell\'s Demon. This causes localized heat death: the target\'s physical and Ether structure breaks down into heat and disorder.</p></div>' +
-        '<div class="skill-item"><h4>Maxwell\'s Demon</h4><p>Shin can locally control entropy within a chosen area. Accelerating entropy pushes a target toward rapid heat death, breaking down energy and structure. Reversing entropy restores matter to an earlier state, repairing allies or objects. Reversal requires significantly more energy than acceleration.</p></div>' +
-        '</div>',
-      stats: { ifc: 55, ccm: 45, lrb: 60, acg: 35, tpc: 50, ceo: 65, fdv: 45, icf: 30 },
-      apexTier: 'Intermediário',
-      mascaraTier: 'Expert'
-    },
-    {
-      id: 2,
-      nome: 'Zeferino',
-      categoria: 'Sub-Personagem',
-      titulo: 'Master of Cultivation',
-      raca: 'Unknown / disputed',
-      faccao: 'Unaffiliated',
-      status: 'Alive (allegedly) — has died at least ten times',
-      imagem: '',
-      descricao: '<h3>Biography</h3>' +
-        '<p>Zeferino is an elderly master of cultivation. According to his own stories, he once shared a toast with Odin in the hall of the dead — while still alive. Or nearly alive. No one knows his true age, not even himself.</p>' +
-        '<p>Old stories, which now survive only in the memory of one senile old man, claim that Zeferino was born not once, but three times in the same morning: the first in a Greek temple, son of a distracted nymph; the second beneath a sacred fig tree in India, crying in Sanskrit; and the third — the most annoying one, by his own account — inside a hut in the middle of the forest, where a giant serpent decided he deserved to be born again just so he would learn to respect his elders. He claims this is why he was born lazy.</p>' +
-        '<p>They say that one day, a bored Zeus threw a lightning bolt at Zeferino\'s crops from Olympus, and Zeferino, annoyed, threw it right back. Furious, Zeus turned him into a goat. Zeferino had already been a goat twice before and found the punishment repetitive, so he simply said he didn\'t have time for it.</p>' +
-        '<p>Once, he claims to have drunk mead at Mimir\'s well. He drank seven cups. They charged him seven eyes for it. Since he only had two, he paid with both his eyes, both his knees, three fingers of his left hand, and a piece of his soul. In return, he gained the wisdom of a god.</p>' +
-        '<p>When he died for the tenth time, he ended up on Anubis\'s scale. Zeferino\'s heart was so heavy it sank the scale, cracked the temple floor, and kept sinking — letting him escape once again, successfully.</p>' +
-        '<p>Zeferino also once met the Brazilian entity known as Curupira, who asked him for a remedy to remove genipap stains from the skin, having turned too purple after a bet with Boitatá. Zeferino taught him the recipe and, in exchange, asked for only one night without nightmares. He slept, for the first time in centuries, like a child.</p>' +
-        '<p>The legends about him are always astonishing, but when he puts his aura on the line, no one stays nearby. Shin Hae says the old man would be capable of destroying the sky itself if it ever annoyed him.</p>',
-      stats: { ifc: 100, ccm: 100, lrb: 100, acg: 100, tpc: 100, ceo: 100, fdv: 100, icf: 100 },
-      apexTier: 'Unclassifiable — exceeds scale range',
-      mascaraTier: 'Unranked'
-    },
-    {
-      id: 3,
-      nome: 'Hermes',
-      categoria: 'Personagem Principal',
-      titulo: '',
-      raca: '',
-      faccao: 'Eden and Project KaIi',
-      status: 'Vivo',
-      imagem: 'https://i.pinimg.com/1200x/98/6a/e9/986ae93e4e01abd3b2e844961fa249a4.jpg',
-      descricao: '<h3>Skills</h3>' +
-        '<div class="skill-grid">' +
-        '<div class="skill-item"><h4>相対論的時間拡張 (Sōtairon-teki Jikan Kakuchō)</h4><p>Instead of halting time on a global scale, Hermes locally manipulates the Higgs field around himself through Ether, reducing his own inertial mass to near zero. This lets his neural impulses and movement occur at a significant fraction of light speed, making him appear to teleport — or the world appear to freeze — to outside observers. The resulting kinetic friction with air molecules is dissipated as harmless heat by his coat, purpose-built to prevent what would otherwise be a nuclear-scale release of energy.</p></div>' +
-        '<div class="skill-item"><h4>The Everett Tower</h4><p>Based on the Many-Worlds Interpretation, Hermes treats time not as a line but as a tree of superposed probable futures. When activated, he links his consciousness to the Entropic Ether, briefly pulling the physical state or knowledge of a possible future version of himself into the present — for example, dodging a fatal blow by overlaying the outcome of a future where he already dodged it. The cost is entropic: retrieving that state collapses the wave function, permanently erasing the future he drew from. Each use burns away a timeline where he could have been happy, found a cure, or won, and the Entropic Ether left behind slowly poisons him.</p></div>' +
-        '</div>',
-      stats: { ifc: 35, ccm: 80, lrb: 40, acg: 85, tpc: 70, ceo: 75, fdv: 90, icf: 80 },
-      apexTier: 'Avançado'
+      "id": 1,
+      "nome": "Holden",
+      "categoria": "Sub-Personagem",
+      "titulo": "Cataclisma do Desconhecido",
+      "raca": "Espectro",
+      "faccao": "Biblioteca Akáshica — Arautos do Desconhecido",
+      "status": "Vivo",
+      "imagem": "https://i.pinimg.com/1200x/96/5c/b1/965cb107c70fa021f9ae78ac94b40498.jpg",
+      "descricao": "<h3 style=\"text-align:center\"><hr /><table><tbody><tr><td><font face=\"Georgia\" size=\"5\">‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ </font><font size=\"5\" face=\"Times New Roman\">‎</font><font size=\"5\"><font face=\"Times New Roman\" color=\"#6644aa\">SEI DEO SEI DEIVAE SACRUM</font><br /></font></td></tr></tbody></table><hr /><p><br /></p><p>BIOGRAFIA</p></h3><div style=\"text-align:justify\">Uma entre quatro entidades que respondem apenas à própria <b>Gaia</b>. Assim como seu semelhantes, o <b>Cataclisma do Desconhecido</b> tem sua gênese num mecanismo evolucionário que acompanha a vida há centenas de milhões de anos: <i>a aversão ao que não é familiar</i>, ou <b>neofobia</b>. Embora deva sua existência à formas sencientes de vida, o verdadeiro domínio do <b>Desconhecido</b> se evidencia na relação que possui com a sapiência: a denominação dos limites do conhecimento — e a consequente atribuição de qualidades transcendentes a dados fenômenos ou entidades — contribuiu para fazer do <b>Desconhecido</b> um dos arquétipos mais expansivos, e de sua detentora o mais exaltado ente de conhecimento entre espectros nativos do planeta. </div><div style=\"text-align:justify\"><br /></div><div style=\"text-align:justify\">Atualmente, o <b>Cataclisma do Desconhecido</b> reside no mais inferior estrato da <b>Biblioteca Akáshica do Empíreo</b>— um território que tomou para si logo após o surgimento da estrutura-compêndio, datado no advento do registro escrito. Lá, <b>Holden</b> atua como diretora autoproclamada, mantendo inacessível a toda e qualquer entidade os mais esotéricos conteúdos do <b>Inconsciente Coletivo da Terra</b>. Aqueles que visitam a <b>Biblioteca</b> à procura de conhecimento podem deparar-se com uma jovem de aparência um tanto desleixada e presença banal, claramente mais preocupada com seu aprendizado do que seu figurino. Caso abordada, ela poderá inferir a localização de todo e qualquer livro almejado pelo indivíduo e orientá-lo em direção a tal, embora suas instruções sejam menos que ortodoxas para aqueles insuficientemente familiarizados com o ambiente, e também deixem de fora quaisquer perigos e desafios no caminho do que se procura. Ao que proveitoso, quaisquer recordações referentes ao encontro são esvaídas no momento em que se sai da <b>Biblioteca</b>, garantindo que a identidade, como também a comprovação da existência, do <b>Cataclisma do Desconhecido</b> permaneça em sigilo.</div><div style=\"text-align:justify\"><br /></div><div style=\"text-align:justify\">Embora acate os desejos que <b>Gaia</b> tem de minimizar a interferência com a vida na <b>Terra</b> por parte dos <b>Cataclismas</b>, <b>Holden</b> tem dado passos sutis para ampliar sua influência, coincidindo com a pretensão humana de desbravar as fronteiras do conhecimento numa velocidade cada vez maior. Assim, o <b>Cataclisma do Desconhecido</b> revelou-se na alvorada do <i>século XX</i> para indivíduos seletos e compatíveis com seus propósitos, conforme a humanidade adentrou o campo da radioatividade e fissão nuclear que culminariam no desenvolvimento da bomba atômica— um instrumento que não apenas reafirmaria o lugar dos seres humanos como a maior ameaça ao planeta, como também os permitiria alvejar aqueles outrora denominados inalcançáveis com uma facilidade sem precedente. Os que juntaram-se à sua causa compõem os <b>Arautos do Desconhecido</b>: um lugar para aqueles que, seja por motivos nobres ou vis, acreditam que a humanidade arrisca esquecer de que pertence mais ao presente do que ao futuro.</div><div style=\"text-align:justify\"><br /></div><div style=\"text-align:justify\">O nome <b>Holden</b> deriva do Inglês arcaico <i>holh</i> (profundo, vão, vazio) e <i>denu</i> (vale).</div>",
+      "stats": {
+        "acg": 100,
+        "ccm": 100,
+        "ceo": 100,
+        "fdv": 100,
+        "icf": 100,
+        "ifc": 100,
+        "lrb": 100,
+        "tpc": 100
+      },
+      "apexTier": "Cataclisma",
+      "mascaraTier": "Não-Registrado"
     }
   ],
-  nextPersonagemId: 4,
+  nextPersonagemId: 2,
 
   equipe: [
     { nome: 'Rick', cargo: 'Dono e Moderador', foto: 'https://i.pinimg.com/736x/02/bc/1d/02bc1ddfb478c7069ac1db5017955648.jpg' },
@@ -164,12 +94,12 @@ var DB = {
 };
 
 function saveDB() {
-  try { localStorage.setItem('forum-antigo-db-v18', JSON.stringify(DB)); } catch (e) {}
+  try { localStorage.setItem('forum-antigo-db-v19', JSON.stringify(DB)); } catch (e) {}
 }
 
 function loadDB() {
   try {
-    var saved = localStorage.getItem('forum-antigo-db-v18');
+    var saved = localStorage.getItem('forum-antigo-db-v19');
     if (saved) {
       var parsed = JSON.parse(saved);
       if (parsed && parsed.nextUserId) DB = parsed;
