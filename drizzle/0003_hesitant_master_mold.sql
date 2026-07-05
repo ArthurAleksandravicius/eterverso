@@ -1,0 +1,1 @@
+ALTER TABLE "personagens" ADD COLUMN IF NOT EXISTS "skills" jsonb DEFAULT '[]'::jsonb;
