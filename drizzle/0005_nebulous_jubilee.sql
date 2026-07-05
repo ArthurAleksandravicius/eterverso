@@ -1,0 +1,1 @@
+ALTER TABLE "personagens" DROP COLUMN "apex_tier";

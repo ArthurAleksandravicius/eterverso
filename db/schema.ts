@@ -112,7 +112,6 @@ export const personagens = pgTable("personagens", {
 	descricao: text().default(""),
 	stats: jsonb().default({}),
 	skills: jsonb().default([]),
-	apexTier: varchar("apex_tier", { length: 60 }).default(''),
 	mascaraTier: varchar("mascara_tier", { length: 60 }).default(''),
 
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
