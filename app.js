@@ -130,7 +130,7 @@ var DB = {
 
   equipe: [
     { nome: 'Rick', cargo: 'Dono e Moderador', foto: 'https://i.pinimg.com/736x/02/bc/1d/02bc1ddfb478c7069ac1db5017955648.jpg' },
-    { nome: 'Mand Eden', cargo: 'Criador, Escritor e Dono da Obra', foto: '' },
+    { nome: 'Mand Raiden', cargo: 'Criador, Escritor e Dono da Obra', foto: '' },
     { nome: 'Ghostmaker', cargo: 'Criador, Escritor e Vice-Dono da Obra', foto: '' },
     { nome: 'Scautz', cargo: 'Criador e Escritor', foto: 'https://i.pinimg.com/736x/55/86/5a/55865a10f994f2379e4a4ac484def034.jpg' },
     { nome: 'Lucas Kabii', cargo: 'Criador e Colaborador', foto: 'https://i.pinimg.com/control1/736x/94/b1/6b/94b16b73301e10ea0b4f5a63500cc619.jpg' }
@@ -140,12 +140,12 @@ var DB = {
 };
 
 function saveDB() {
-  try { localStorage.setItem('forum-antigo-db-v20', JSON.stringify(DB)); } catch (e) {}
+  try { localStorage.setItem('forum-antigo-db-v21', JSON.stringify(DB)); } catch (e) {}
 }
 
 function loadDB() {
   try {
-    var saved = localStorage.getItem('forum-antigo-db-v20');
+    var saved = localStorage.getItem('forum-antigo-db-v21');
     if (saved) {
       var parsed = JSON.parse(saved);
       if (parsed && parsed.nextUserId) DB = parsed;
