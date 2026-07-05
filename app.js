@@ -1,8 +1,8 @@
 var DB = {
   users: [
-    { id: 1, username: 'Admin', password: 'admin123', email: 'admin@forum.com', avatar: '', title: 'Administrador', posts: 0, role: 'admin', bio: '', joinDate: '01/01/2026', admTentativaUsada: false },
-    { id: 2, username: 'MandRaiden', password: 'mandraiden123', email: 'mandraiden@forum.com', avatar: '', title: 'Dono do Éterverso', posts: 0, role: 'admin', bio: 'Criador e dono do Éterverso.', joinDate: '01/01/2026', admTentativaUsada: true },
-    { id: 3, username: 'Rick', password: 'rick123', email: 'rick@forum.com', avatar: 'https://i.pinimg.com/736x/02/bc/1d/02bc1ddfb478c7069ac1db5017955648.jpg', title: 'Moderador — Dono da Wikia', posts: 0, role: 'moderador', bio: 'Responsável pela wikia de personagens e criador do sistema Apex Scale.', joinDate: '01/01/2026', admTentativaUsada: true }
+    { id: 1, username: 'Admin', email: 'admin@forum.com', avatar: '', title: 'Administrador', posts: 0, role: 'admin', bio: '', joinDate: '01/01/2026', admTentativaUsada: false },
+    { id: 2, username: 'MandRaiden', email: 'mandraiden@forum.com', avatar: '', title: 'Dono do Éterverso', posts: 0, role: 'admin', bio: 'Criador e dono do Éterverso.', joinDate: '01/01/2026', admTentativaUsada: true },
+    { id: 3, username: 'Rick', email: 'rick@forum.com', avatar: 'https://i.pinimg.com/736x/02/bc/1d/02bc1ddfb478c7069ac1db5017955648.jpg', title: 'Moderador — Dono da Wikia', posts: 0, role: 'moderador', bio: 'Responsável pela wikia de personagens e criador do sistema Apex Scale.', joinDate: '01/01/2026', admTentativaUsada: true }
   ],
   nextUserId: 4,
 
@@ -786,22 +786,77 @@ function showAlert(msg, type) {
   }, 3500);
 }
 
+function apiPost(url, body, cb) {
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+    .then(function(res) {
+      return res.json().then(function(data) { return { ok: res.ok, data: data }; });
+    })
+    .then(function(r) {
+      if (!r.ok) cb((r.data && r.data.error) || 'Erro no servidor.');
+      else cb(null, r.data);
+    })
+    .catch(function() {
+      cb('Não foi possível conectar ao servidor.');
+    });
+}
+
+function formatJoinDate(iso) {
+  if (!iso) return '';
+  var m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return String(iso);
+  return m[3] + '/' + m[2] + '/' + m[1];
+}
+
+// Sincroniza o usuário vindo do servidor com o espelho local (DB.users),
+// que o resto do fórum usa para exibir perfis, posts e permissões.
+function applyServerSession(serverUser) {
+  if (!serverUser) {
+    DB.session = null;
+    saveDB();
+    return;
+  }
+  var local = DB.users.find(function(u) {
+    return u.username.toLowerCase() === serverUser.username.toLowerCase();
+  });
+  if (!local) {
+    local = { id: DB.nextUserId++, posts: 0, avatar: '', bio: '' };
+    DB.users.push(local);
+  }
+  local.serverId = serverUser.id;
+  local.username = serverUser.username;
+  local.email = serverUser.email;
+  local.avatar = serverUser.avatar || local.avatar || '';
+  local.title = serverUser.title || local.title || 'Membro';
+  local.bio = serverUser.bio || local.bio || '';
+  local.role = serverUser.role || 'member';
+  if (!local.joinDate) local.joinDate = formatJoinDate(serverUser.joinDate);
+  if (local.admTentativaUsada === undefined) local.admTentativaUsada = !!serverUser.admTentativaUsada;
+  DB.session = local;
+  saveDB();
+}
+
 function doLogin() {
   var username = document.getElementById('login-username').value.trim();
   var password = document.getElementById('login-password').value;
-  var user = DB.users.find(function(u) { return u.username.toLowerCase() === username.toLowerCase(); });
-  if (!user || user.password !== password) {
-    showAlert('Usuário ou senha incorretos.', 'error');
+  if (!username || !password) {
+    showAlert('Preencha usuário e senha.', 'error');
     return;
   }
-  DB.session = user;
-  saveDB();
-  closeModal();
-  navigate('forum');
-  showAlert('Login realizado com sucesso.', 'success');
+  apiPost('/api/auth/login', { username: username, password: password }, function(err, data) {
+    if (err) { showAlert(err, 'error'); return; }
+    applyServerSession(data.user);
+    closeModal();
+    navigate('forum');
+    showAlert('Login realizado com sucesso.', 'success');
+  });
 }
 
 function doLogout() {
+  apiPost('/api/auth/logout', {}, function() {});
   DB.session = null;
   saveDB();
   navigate('forum');
@@ -821,31 +876,13 @@ function submitRegistro() {
     showAlert('As senhas não conferem.', 'error');
     return;
   }
-  var existe = DB.users.find(function(u) { return u.username.toLowerCase() === username.toLowerCase(); });
-  if (existe) {
-    showAlert('Esse nome de usuário já existe.', 'error');
-    return;
-  }
 
-  var agora = new Date();
-  var novo = {
-    id: DB.nextUserId++,
-    username: username,
-    password: password,
-    email: email,
-    avatar: '',
-    title: 'Membro',
-    posts: 0,
-    role: 'member',
-    bio: '',
-    joinDate: agora.toLocaleDateString('pt-BR'),
-    admTentativaUsada: false
-  };
-  DB.users.push(novo);
-  DB.session = novo;
-  saveDB();
-  navigate('forum');
-  showAlert('Cadastro realizado. Bem-vindo(a)!', 'success');
+  apiPost('/api/auth/signup', { username: username, email: email, password: password }, function(err, data) {
+    if (err) { showAlert(err, 'error'); return; }
+    applyServerSession(data.user);
+    navigate('forum');
+    showAlert('Cadastro realizado. Bem-vindo(a)!', 'success');
+  });
 }
 
 function startNewThread(catId) {
@@ -1214,4 +1251,20 @@ function onClickValidarAdmin() {
 window.addEventListener('DOMContentLoaded', function() {
   loadDB();
   navigate('forum');
+
+  // Restaura a sessão real no servidor (cookie). Se o servidor negar,
+  // limpa a sessão local; se estiver fora do ar, mantém o que havia.
+  fetch('/api/auth/me')
+    .then(function(res) {
+      if (res.status === 401) return { user: null };
+      if (!res.ok) return null;
+      return res.json();
+    })
+    .then(function(data) {
+      if (!data) return;
+      applyServerSession(data.user);
+      render();
+      updateTopBar();
+    })
+    .catch(function() {});
 });

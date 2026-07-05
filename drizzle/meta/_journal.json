@@ -29,6 +29,13 @@
       "when": 1783266275704,
       "tag": "0003_hesitant_master_mold",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783266897513,
+      "tag": "0004_special_christian_walker",
+      "breakpoints": true
     }
   ]
 }

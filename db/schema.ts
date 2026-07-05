@@ -51,6 +51,7 @@ export const users = pgTable("users", {
 
 	email: varchar({ length: 120 }).notNull(),
 	username: varchar({ length: 50 }).notNull(),
+	passwordHash: text("password_hash").default('').notNull(),
 
 	avatar: text().default(''),
 	title: varchar({ length: 100 }).default(''),
