@@ -493,6 +493,7 @@ function renderPersonagemView() {
 }
 
 var STAT_LABELS = ['Ataque', 'Destreza', 'Defesa', 'Reserva', 'Controle', 'Refino', 'Emissão', 'Alma', 'Inteligência', 'Habilidade'];
+var STAT_ABBR = ['ATK', 'DEX', 'DEF', 'STA', 'CON', 'REF', 'EMI', 'SOUL', 'INT', 'SKILL'];
 var STAT_KEYS = ['ataque', 'destreza', 'defesa', 'reserva', 'controle', 'refino', 'emissao', 'alma', 'inteligencia', 'habilidade'];
 
 function statsPreenchidos(stats) {
@@ -504,7 +505,7 @@ function statsPreenchidos(stats) {
 }
 
 function buildRadarChart(stats) {
-  var labels = STAT_LABELS;
+  var labels = STAT_ABBR;
   var keys = STAT_KEYS;
   var n = labels.length;
   var size = 260;
