@@ -20,7 +20,7 @@ const sql = postgres(process.env.DATABASE_URL, { prepare: false });
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '100kb' }));
+app.use(express.json({ limit: '1mb' }));
 app.use(function (req, res, next) {
   if (!req.body) req.body = {};
   next();
@@ -151,6 +151,144 @@ app.get('/api/auth/me', async function (req, res) {
   } catch (err) {
     console.error('me:', err);
     res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// ---------- Personagens (fichas) ----------
+
+const STAT_KEYS = ['ataque', 'destreza', 'defesa', 'reserva', 'controle', 'refino', 'emissao', 'alma', 'inteligencia', 'habilidade'];
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function publicPersonagem(p) {
+  return {
+    id: p.id,
+    nome: p.nome,
+    categoria: p.categoria,
+    titulo: p.titulo,
+    raca: p.raca,
+    faccao: p.faccao,
+    status: p.status,
+    imagem: p.imagem,
+    descricao: p.descricao,
+    stats: p.stats || {},
+    mascaraTier: p.mascara_tier,
+  };
+}
+
+function sanitizeStats(raw) {
+  const stats = {};
+  if (!raw || typeof raw !== 'object') return stats;
+  STAT_KEYS.forEach(function (k) {
+    if (raw[k] === undefined || raw[k] === null || raw[k] === '') return;
+    let n = parseInt(raw[k], 10);
+    if (isNaN(n)) n = 0;
+    stats[k] = Math.max(0, Math.min(100, n));
+  });
+  return stats;
+}
+
+const PERSONAGEM_CAMPOS = [
+  ['nome', 100],
+  ['categoria', 50],
+  ['titulo', 100],
+  ['raca', 80],
+  ['faccao', 120],
+  ['status', 80],
+  ['imagem', 500],
+  ['mascaraTier', 60],
+];
+
+function lerPersonagemBody(body) {
+  const v = {};
+  for (const [campo, max] of PERSONAGEM_CAMPOS) {
+    const valor = String(body[campo] || '').trim();
+    if (valor.length > max) return { error: 'O campo "' + campo + '" excede ' + max + ' caracteres.' };
+    v[campo] = valor;
+  }
+  if (!v.nome) return { error: 'O nome é obrigatório.' };
+  v.descricao = String(body.descricao || '');
+  if (!v.descricao || v.descricao === '<br>') return { error: 'A descrição é obrigatória.' };
+  if (v.descricao.length > 200000) return { error: 'A descrição é longa demais.' };
+  v.stats = sanitizeStats(body.stats);
+  return { valores: v };
+}
+
+async function requireModOrAdmin(req, res) {
+  if (!req.session.userId) {
+    res.status(401).json({ error: 'Faça login para gerenciar personagens.' });
+    return null;
+  }
+  const rows = await sql`SELECT * FROM users WHERE id = ${req.session.userId} LIMIT 1`;
+  const user = rows[0];
+  if (!user || (user.role !== 'admin' && user.role !== 'moderador')) {
+    res.status(403).json({ error: 'Apenas administradores e moderadores podem gerenciar personagens.' });
+    return null;
+  }
+  return user;
+}
+
+app.get('/api/personagens', async function (req, res) {
+  try {
+    const rows = await sql`SELECT * FROM personagens ORDER BY created_at ASC`;
+    res.json({ personagens: rows.map(publicPersonagem) });
+  } catch (err) {
+    console.error('personagens list:', err);
+    res.status(500).json({ error: 'Erro interno ao listar personagens.' });
+  }
+});
+
+app.post('/api/personagens', async function (req, res) {
+  try {
+    const user = await requireModOrAdmin(req, res);
+    if (!user) return;
+    const { error, valores: v } = lerPersonagemBody(req.body);
+    if (error) return res.status(400).json({ error });
+
+    const rows = await sql`
+      INSERT INTO personagens (author_id, nome, categoria, titulo, raca, faccao, status, imagem, descricao, stats, mascara_tier)
+      VALUES (${user.id}, ${v.nome}, ${v.categoria}, ${v.titulo}, ${v.raca}, ${v.faccao}, ${v.status}, ${v.imagem}, ${v.descricao}, ${sql.json(v.stats)}, ${v.mascaraTier})
+      RETURNING *`;
+    res.status(201).json({ personagem: publicPersonagem(rows[0]) });
+  } catch (err) {
+    console.error('personagem create:', err);
+    res.status(500).json({ error: 'Erro interno ao cadastrar o personagem.' });
+  }
+});
+
+app.put('/api/personagens/:id', async function (req, res) {
+  try {
+    const user = await requireModOrAdmin(req, res);
+    if (!user) return;
+    if (!UUID_RE.test(req.params.id)) return res.status(404).json({ error: 'Personagem não encontrado.' });
+    const { error, valores: v } = lerPersonagemBody(req.body);
+    if (error) return res.status(400).json({ error });
+
+    const rows = await sql`
+      UPDATE personagens SET
+        nome = ${v.nome}, categoria = ${v.categoria}, titulo = ${v.titulo}, raca = ${v.raca},
+        faccao = ${v.faccao}, status = ${v.status}, imagem = ${v.imagem}, descricao = ${v.descricao},
+        stats = ${sql.json(v.stats)}, mascara_tier = ${v.mascaraTier}, updated_at = now()
+      WHERE id = ${req.params.id}
+      RETURNING *`;
+    if (rows.length === 0) return res.status(404).json({ error: 'Personagem não encontrado.' });
+    res.json({ personagem: publicPersonagem(rows[0]) });
+  } catch (err) {
+    console.error('personagem update:', err);
+    res.status(500).json({ error: 'Erro interno ao salvar o personagem.' });
+  }
+});
+
+app.delete('/api/personagens/:id', async function (req, res) {
+  try {
+    const user = await requireModOrAdmin(req, res);
+    if (!user) return;
+    if (!UUID_RE.test(req.params.id)) return res.status(404).json({ error: 'Personagem não encontrado.' });
+    const rows = await sql`DELETE FROM personagens WHERE id = ${req.params.id} RETURNING id`;
+    if (rows.length === 0) return res.status(404).json({ error: 'Personagem não encontrado.' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('personagem delete:', err);
+    res.status(500).json({ error: 'Erro interno ao excluir o personagem.' });
   }
 });
 

@@ -402,9 +402,43 @@ function renderNovaThread() {
   return html;
 }
 
+// Fichas vindas do banco de dados. null = ainda não carregadas (usa as locais como fallback).
+var serverPersonagens = null;
+
+function carregarPersonagensServidor() {
+  fetch('/api/personagens')
+    .then(function(res) { return res.ok ? res.json() : null; })
+    .then(function(data) {
+      if (!data || !data.personagens) return;
+      serverPersonagens = data.personagens;
+      if (currentPage === 'wiki' || currentPage === 'personagemView') render();
+    })
+    .catch(function() {});
+}
+
+// Lista exibida no site: as do servidor + as que só existem neste navegador.
+// Fichas locais com o mesmo nome de uma do servidor ficam ocultas (a do servidor vale).
+function listaPersonagens() {
+  if (serverPersonagens === null) return DB.personagens;
+  var nomes = {};
+  serverPersonagens.forEach(function(p) { nomes[p.nome.toLowerCase()] = true; });
+  var locais = DB.personagens.filter(function(p) { return !nomes[p.nome.toLowerCase()]; });
+  return serverPersonagens.concat(locais);
+}
+
+// Ficha criada antes da integração com o banco: só existe no localStorage deste navegador.
+function personagemLocalApenas(p) {
+  return serverPersonagens !== null && typeof p.id === 'number';
+}
+
+// Ids do servidor são uuids (string); os locais são números. Gera o literal certo para onclick.
+function idJs(id) {
+  return typeof id === 'number' ? id : "'" + id + "'";
+}
+
 function renderCharCard(p) {
   var statusColor = p.status === 'Vivo' || p.status === 'Viva' ? '#007700' : (p.status === 'Afastada' || p.status === 'Afastado' ? '#774400' : '#770000');
-  var html = '<div class="char-card" onclick="navigate(\'personagemView\',' + p.id + ')">';
+  var html = '<div class="char-card" onclick="navigate(\'personagemView\',' + idJs(p.id) + ')">';
   if (p.imagem) {
     html += '<img class="thumb" src="' + ha(p.imagem) + '" alt="' + ha(p.nome) + '">';
   } else {
@@ -427,8 +461,9 @@ function renderWiki() {
   html += '</div>';
   html += '<div style="background:#f8f9ff;border:1px solid #8899aa;padding:10px;margin-bottom:10px;font-size:12px;color:#555;">Clique em um personagem para ver o perfil completo.</div>';
 
-  var principais = DB.personagens.filter(function(p) { return p.categoria !== 'Sub-Personagem'; });
-  var subPersonagens = DB.personagens.filter(function(p) { return p.categoria === 'Sub-Personagem'; });
+  var lista = listaPersonagens();
+  var principais = lista.filter(function(p) { return p.categoria !== 'Sub-Personagem'; });
+  var subPersonagens = lista.filter(function(p) { return p.categoria === 'Sub-Personagem'; });
 
   if (principais.length) {
     html += '<div class="cat-header" style="margin-top:6px;"><span>Personagens Principais</span></div>';
@@ -440,7 +475,7 @@ function renderWiki() {
     subPersonagens.forEach(function(p) { html += renderCharCard(p); });
   }
 
-  if (!DB.personagens.length) {
+  if (!lista.length) {
     html += '<div style="text-align:center;padding:30px;color:#888;">Nenhum personagem cadastrado ainda.</div>';
   }
 
@@ -448,7 +483,15 @@ function renderWiki() {
 }
 
 function renderPersonagemView() {
-  var p = DB.personagens.find(function(x) { return x.id === currentPersonagem; });
+  var lista = listaPersonagens();
+  var p = lista.find(function(x) { return String(x.id) === String(currentPersonagem); });
+  // Ficha local substituída pela versão do servidor (mesmo nome): segue para a do servidor.
+  if (!p && typeof currentPersonagem === 'number') {
+    var seed = DB.personagens.find(function(x) { return x.id === currentPersonagem; });
+    if (seed) {
+      p = lista.find(function(x) { return x.nome.toLowerCase() === seed.nome.toLowerCase(); });
+    }
+  }
   if (!p) return '<p>Personagem não encontrado.</p>';
   var statusColor = p.status === 'Vivo' || p.status === 'Viva' ? '#007700' : (p.status === 'Afastada' || p.status === 'Afastado' ? '#774400' : '#770000');
 
@@ -457,9 +500,17 @@ function renderPersonagemView() {
   html += '<div class="char-sheet-head">';
   html += '<h2>' + h(p.nome) + (p.titulo ? ' <em>' + h(p.titulo) + '</em>' : '') + '</h2>';
   if (isModOrAdmin()) {
-    html += '<div style="display:flex;gap:5px;"><button class="btn btn-warn btn-small" onclick="editarPersonagem(' + p.id + ')">Editar</button><button class="btn btn-danger btn-small" onclick="deletarPersonagem(' + p.id + ')">Deletar</button></div>';
+    html += '<div style="display:flex;gap:5px;"><button class="btn btn-warn btn-small" onclick="editarPersonagem(' + idJs(p.id) + ')">Editar</button><button class="btn btn-danger btn-small" onclick="deletarPersonagem(' + idJs(p.id) + ')">Deletar</button></div>';
   }
   html += '</div>';
+
+  if (personagemLocalApenas(p)) {
+    html += '<div class="alert alert-info">Esta ficha está salva apenas neste navegador — outras pessoas não a veem.';
+    if (isModOrAdmin()) {
+      html += ' <button class="btn btn-small btn-primary" onclick="enviarPersonagemAoServidor(' + p.id + ')">Enviar ao servidor</button>';
+    }
+    html += '</div>';
+  }
 
   html += '<div class="char-sheet-grid">';
   html += '<div class="char-sheet-card">';
@@ -560,7 +611,7 @@ function renderNovoPersonagem() {
   if (!isModOrAdmin()) return '<div class="alert alert-error">Acesso negado.</div>';
 
   var editId = sessionStorage.getItem('editPersonagemId');
-  var existing = editId ? DB.personagens.find(function(p) { return p.id === parseInt(editId); }) : null;
+  var existing = editId ? listaPersonagens().find(function(p) { return String(p.id) === editId; }) : null;
 
   var html = '<div class="breadcrumb"><a onclick="navigate(\'wiki\')">Personagens</a> &raquo; ' + (existing ? 'Editar Personagem' : 'Novo Personagem') + '</div>';
   html += '<div class="cat-header"><span>' + (existing ? 'Editar Personagem' : 'Cadastrar Personagem') + '</span></div>';
@@ -592,7 +643,7 @@ function renderNovoPersonagem() {
   html += '</div>';
 
   var btnLabel = existing ? 'Salvar Alterações' : 'Cadastrar Personagem';
-  var onclick = existing ? 'salvarEdicaoPersonagem(' + existing.id + ')' : 'submitPersonagem()';
+  var onclick = existing ? 'salvarEdicaoPersonagem(' + idJs(existing.id) + ')' : 'submitPersonagem()';
   html += '<div style="display:flex;gap:8px;margin-top:8px;"><button class="btn btn-primary" onclick="' + onclick + '">' + btnLabel + '</button><button class="btn btn-small" onclick="navigate(\'wiki\')">Cancelar</button></div>';
   html += '</div>';
   return html;
@@ -736,11 +787,11 @@ function showAlert(msg, type) {
   }, 3500);
 }
 
-function apiPost(url, body, cb) {
+function apiRequest(method, url, body, cb) {
   fetch(url, {
-    method: 'POST',
+    method: method,
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    body: body === undefined ? undefined : JSON.stringify(body)
   })
     .then(function(res) {
       return res.json().then(function(data) { return { ok: res.ok, data: data }; });
@@ -752,6 +803,10 @@ function apiPost(url, body, cb) {
     .catch(function() {
       cb('Não foi possível conectar ao servidor.');
     });
+}
+
+function apiPost(url, body, cb) {
+  apiRequest('POST', url, body, cb);
 }
 
 function formatJoinDate(iso) {
@@ -987,63 +1042,113 @@ function lerStatsDoFormulario() {
   return algumPreenchido ? stats : {};
 }
 
+function lerFormPersonagem() {
+  return {
+    nome: document.getElementById('p-nome').value.trim(),
+    categoria: document.getElementById('p-categoria').value,
+    titulo: document.getElementById('p-titulo').value.trim(),
+    raca: document.getElementById('p-raca').value.trim(),
+    faccao: document.getElementById('p-faccao').value.trim(),
+    status: document.getElementById('p-status').value.trim(),
+    imagem: document.getElementById('p-imagem').value.trim(),
+    descricao: getEditorContent('p-editor'),
+    stats: lerStatsDoFormulario(),
+    mascaraTier: document.getElementById('p-mascara-tier').value.trim()
+  };
+}
+
 function submitPersonagem() {
   if (!isModOrAdmin()) { showAlert('Apenas administradores e moderadores podem cadastrar personagens.', 'error'); return; }
-  var nome = document.getElementById('p-nome').value.trim();
-  var categoria = document.getElementById('p-categoria').value;
-  var titulo = document.getElementById('p-titulo').value.trim();
-  var raca = document.getElementById('p-raca').value.trim();
-  var faccao = document.getElementById('p-faccao').value.trim();
-  var status = document.getElementById('p-status').value.trim();
-  var imagem = document.getElementById('p-imagem').value.trim();
-  var descricao = getEditorContent('p-editor');
-  var mascaraTier = document.getElementById('p-mascara-tier').value.trim();
+  var dados = lerFormPersonagem();
+  if (!dados.nome || !dados.descricao || dados.descricao === '<br>') { showAlert('Preencha ao menos o nome e a descrição.', 'error'); return; }
 
-  if (!nome || !descricao || descricao === '<br>') { showAlert('Preencha ao menos o nome e a descrição.', 'error'); return; }
-
-  DB.personagens.push({
-    id: DB.nextPersonagemId++,
-    nome: nome,
-    categoria: categoria,
-    titulo: titulo,
-    raca: raca,
-    faccao: faccao,
-    status: status,
-    imagem: imagem,
-    descricao: descricao,
-    stats: lerStatsDoFormulario(),
-    mascaraTier: mascaraTier
+  apiRequest('POST', '/api/personagens', dados, function(err, data) {
+    if (err) { showAlert(err, 'error'); return; }
+    if (serverPersonagens === null) serverPersonagens = [];
+    serverPersonagens.push(data.personagem);
+    navigate('wiki');
+    showAlert('Personagem cadastrado.', 'success');
   });
-  saveDB();
-  navigate('wiki');
-  showAlert('Personagem cadastrado.', 'success');
 }
 
 function salvarEdicaoPersonagem(id) {
   if (!isModOrAdmin()) { showAlert('Apenas administradores e moderadores podem editar personagens.', 'error'); return; }
-  var p = DB.personagens.find(function(x) { return x.id === id; });
-  if (!p) return;
-  p.nome = document.getElementById('p-nome').value.trim();
-  p.categoria = document.getElementById('p-categoria').value;
-  p.titulo = document.getElementById('p-titulo').value.trim();
-  p.raca = document.getElementById('p-raca').value.trim();
-  p.faccao = document.getElementById('p-faccao').value.trim();
-  p.status = document.getElementById('p-status').value.trim();
-  p.imagem = document.getElementById('p-imagem').value.trim();
-  p.descricao = getEditorContent('p-editor');
-  p.stats = lerStatsDoFormulario();
-  p.mascaraTier = document.getElementById('p-mascara-tier').value.trim();
-  saveDB();
-  sessionStorage.removeItem('editPersonagemId');
-  navigate('personagemView', id);
+  var dados = lerFormPersonagem();
+  if (!dados.nome || !dados.descricao || dados.descricao === '<br>') { showAlert('Preencha ao menos o nome e a descrição.', 'error'); return; }
+
+  // Ficha antiga, salva apenas neste navegador: mantém o salvamento local.
+  if (typeof id === 'number') {
+    var p = DB.personagens.find(function(x) { return x.id === id; });
+    if (!p) return;
+    p.nome = dados.nome;
+    p.categoria = dados.categoria;
+    p.titulo = dados.titulo;
+    p.raca = dados.raca;
+    p.faccao = dados.faccao;
+    p.status = dados.status;
+    p.imagem = dados.imagem;
+    p.descricao = dados.descricao;
+    p.stats = dados.stats;
+    p.mascaraTier = dados.mascaraTier;
+    saveDB();
+    sessionStorage.removeItem('editPersonagemId');
+    navigate('personagemView', id);
+    return;
+  }
+
+  apiRequest('PUT', '/api/personagens/' + id, dados, function(err, data) {
+    if (err) { showAlert(err, 'error'); return; }
+    var idx = serverPersonagens.findIndex(function(x) { return x.id === id; });
+    if (idx !== -1) serverPersonagens[idx] = data.personagem;
+    sessionStorage.removeItem('editPersonagemId');
+    navigate('personagemView', id);
+  });
 }
 
 function deletarPersonagem(id) {
   if (!isModOrAdmin()) { showAlert('Apenas administradores e moderadores podem excluir personagens.', 'error'); return; }
   if (!confirm('Excluir este personagem?')) return;
-  DB.personagens = DB.personagens.filter(function(p) { return p.id !== id; });
-  saveDB();
-  navigate('wiki');
+
+  if (typeof id === 'number') {
+    DB.personagens = DB.personagens.filter(function(p) { return p.id !== id; });
+    saveDB();
+    navigate('wiki');
+    return;
+  }
+
+  apiRequest('DELETE', '/api/personagens/' + id, undefined, function(err) {
+    if (err) { showAlert(err, 'error'); return; }
+    serverPersonagens = serverPersonagens.filter(function(p) { return p.id !== id; });
+    navigate('wiki');
+  });
+}
+
+// Migra uma ficha presa no localStorage deste navegador para o banco de dados.
+function enviarPersonagemAoServidor(id) {
+  if (!isModOrAdmin()) { showAlert('Apenas administradores e moderadores podem gerenciar personagens.', 'error'); return; }
+  var p = DB.personagens.find(function(x) { return x.id === id; });
+  if (!p) return;
+
+  apiRequest('POST', '/api/personagens', {
+    nome: p.nome,
+    categoria: p.categoria,
+    titulo: p.titulo,
+    raca: p.raca,
+    faccao: p.faccao,
+    status: p.status,
+    imagem: p.imagem,
+    descricao: p.descricao,
+    stats: p.stats || {},
+    mascaraTier: p.mascaraTier || ''
+  }, function(err, data) {
+    if (err) { showAlert(err, 'error'); return; }
+    DB.personagens = DB.personagens.filter(function(x) { return x.id !== id; });
+    saveDB();
+    if (serverPersonagens === null) serverPersonagens = [];
+    serverPersonagens.push(data.personagem);
+    navigate('personagemView', data.personagem.id);
+    showAlert('Ficha enviada ao servidor. Agora ela aparece para todos.', 'success');
+  });
 }
 
 function alterarCargoUsuario(id, novoCargo) {
@@ -1194,6 +1299,7 @@ function onClickValidarAdmin() {
 window.addEventListener('DOMContentLoaded', function() {
   loadDB();
   navigate('forum');
+  carregarPersonagensServidor();
 
   // Restaura a sessão real no servidor (cookie). Se o servidor negar,
   // limpa a sessão local; se estiver fora do ar, mantém o que havia.
