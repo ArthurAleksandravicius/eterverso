@@ -37,7 +37,7 @@ function buildEditor(id, initialContent) {
   html += '<button type="button" title="Desfazer" onclick="execCmd(\'undo\',null,\'' + id + '\')">↶</button>';
   html += '<button type="button" title="Refazer" onclick="execCmd(\'redo\',null,\'' + id + '\')">↷</button>';
   html += '</div>';
-  html += '<div class="editor-body" id="' + id + '" contenteditable="true" data-placeholder="Escreva aqui..." oninput="updateEditorCount(\'' + id + '\')">' + (initialContent || '') + '</div>';
+  html += '<div class="editor-body" id="' + id + '" contenteditable="true" spellcheck="false" data-placeholder="Escreva aqui..." oninput="updateEditorCount(\'' + id + '\')">' + (initialContent || '') + '</div>';
   html += '<div class="editor-status"><span>Editor completo</span><span id="count-' + id + '">0 caracteres</span></div>';
   html += '</div>';
   setTimeout(function() { updateEditorCount(id); }, 50);
