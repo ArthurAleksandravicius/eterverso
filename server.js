@@ -171,6 +171,7 @@ function publicPersonagem(p) {
     imagem: p.imagem,
     descricao: p.descricao,
     stats: p.stats || {},
+    skills: p.skills || [],
     mascaraTier: p.mascara_tier,
   };
 }
@@ -185,6 +186,20 @@ function sanitizeStats(raw) {
     stats[k] = Math.max(0, Math.min(100, n));
   });
   return stats;
+}
+
+function sanitizeSkills(raw) {
+  if (!Array.isArray(raw)) return [];
+  const skills = [];
+  for (const item of raw) {
+    if (skills.length >= 60) break;
+    if (!item || typeof item !== 'object') continue;
+    const nome = String(item.nome || '').trim().slice(0, 100);
+    const descricao = String(item.descricao || '').trim().slice(0, 2000);
+    const tipo = item.tipo === 'equipamento' ? 'equipamento' : 'skill';
+    if (nome || descricao) skills.push({ nome, descricao, tipo });
+  }
+  return skills;
 }
 
 const PERSONAGEM_CAMPOS = [
@@ -210,6 +225,7 @@ function lerPersonagemBody(body) {
   if (!v.descricao || v.descricao === '<br>') return { error: 'A descrição é obrigatória.' };
   if (v.descricao.length > 200000) return { error: 'A descrição é longa demais.' };
   v.stats = sanitizeStats(body.stats);
+  v.skills = sanitizeSkills(body.skills);
   return { valores: v };
 }
 
@@ -245,8 +261,8 @@ app.post('/api/personagens', async function (req, res) {
     if (error) return res.status(400).json({ error });
 
     const rows = await sql`
-      INSERT INTO personagens (author_id, nome, categoria, titulo, raca, faccao, status, imagem, descricao, stats, mascara_tier)
-      VALUES (${user.id}, ${v.nome}, ${v.categoria}, ${v.titulo}, ${v.raca}, ${v.faccao}, ${v.status}, ${v.imagem}, ${v.descricao}, ${sql.json(v.stats)}, ${v.mascaraTier})
+      INSERT INTO personagens (author_id, nome, categoria, titulo, raca, faccao, status, imagem, descricao, stats, skills, mascara_tier)
+      VALUES (${user.id}, ${v.nome}, ${v.categoria}, ${v.titulo}, ${v.raca}, ${v.faccao}, ${v.status}, ${v.imagem}, ${v.descricao}, ${sql.json(v.stats)}, ${sql.json(v.skills)}, ${v.mascaraTier})
       RETURNING *`;
     res.status(201).json({ personagem: publicPersonagem(rows[0]) });
   } catch (err) {
@@ -267,7 +283,7 @@ app.put('/api/personagens/:id', async function (req, res) {
       UPDATE personagens SET
         nome = ${v.nome}, categoria = ${v.categoria}, titulo = ${v.titulo}, raca = ${v.raca},
         faccao = ${v.faccao}, status = ${v.status}, imagem = ${v.imagem}, descricao = ${v.descricao},
-        stats = ${sql.json(v.stats)}, mascara_tier = ${v.mascaraTier}, updated_at = now()
+        stats = ${sql.json(v.stats)}, skills = ${sql.json(v.skills)}, mascara_tier = ${v.mascaraTier}, updated_at = now()
       WHERE id = ${req.params.id}
       RETURNING *`;
     if (rows.length === 0) return res.status(404).json({ error: 'Personagem não encontrado.' });

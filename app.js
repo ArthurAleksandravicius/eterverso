@@ -527,6 +527,27 @@ function renderPersonagemView() {
   html += '<div class="char-sheet-body">' + p.descricao + '</div>';
   html += '</div>';
 
+  if (p.skills && p.skills.length) {
+    var skillCards = p.skills.filter(function(sk) { return sk.tipo !== 'equipamento'; });
+    var equipCards = p.skills.filter(function(sk) { return sk.tipo === 'equipamento'; });
+    if (skillCards.length) {
+      html += '<div class="cat-header" style="margin-top:15px;"><span>Skills</span></div>';
+      html += '<div class="skill-grid">';
+      skillCards.forEach(function(sk) {
+        html += '<div class="skill-item"><h4>' + h(sk.nome) + '</h4><p>' + h(sk.descricao) + '</p></div>';
+      });
+      html += '</div>';
+    }
+    if (equipCards.length) {
+      html += '<div class="cat-header" style="margin-top:15px;"><span>Equipamentos</span></div>';
+      html += '<div class="skill-grid">';
+      equipCards.forEach(function(sk) {
+        html += '<div class="skill-item equip-item"><h4>' + h(sk.nome) + '</h4><p>' + h(sk.descricao) + '</p></div>';
+      });
+      html += '</div>';
+    }
+  }
+
   if (statsPreenchidos(p.stats)) {
     html += '<div class="cat-header" style="margin-top:15px;"><span>Atributos</span></div>';
     html += '<div class="stat-panel">';
@@ -640,6 +661,16 @@ function renderNovoPersonagem() {
   html += '</div>';
   html += '<div class="field-desc">Cada atributo vai de 0 a 100. Se preenchidos, geram o gráfico de teia na página do personagem.</div>';
   html += '<div class="form-row" style="margin-top:8px;"><label>Classificação segundo A Máscara (opcional)</label><input type="text" id="p-mascara-tier" value="' + (existing ? ha(existing.mascaraTier) : '') + '"></div>';
+  html += '</div>';
+
+  var skillsExistentes = (existing && existing.skills) ? existing.skills : [];
+  html += '<div class="cat-header" style="margin-top:10px;"><span>Skills e Equipamentos (opcional)</span></div>';
+  html += '<div style="border:1px solid #8899aa;background:#fff;padding:12px;margin-bottom:10px;">';
+  html += '<div class="field-desc" style="margin-bottom:8px;">Cada card aparece na ficha do personagem, na seção Skills ou Equipamentos conforme o tipo escolhido.</div>';
+  html += '<div id="p-skills-list">';
+  skillsExistentes.forEach(function(sk) { html += skillFormRowHtml(sk.nome, sk.descricao, sk.tipo); });
+  html += '</div>';
+  html += '<button type="button" class="btn btn-small btn-success" onclick="adicionarSkillFormRow()">+ Adicionar Card</button>';
   html += '</div>';
 
   var btnLabel = existing ? 'Salvar Alterações' : 'Cadastrar Personagem';
@@ -1042,6 +1073,32 @@ function lerStatsDoFormulario() {
   return algumPreenchido ? stats : {};
 }
 
+function skillFormRowHtml(nome, descricao, tipo) {
+  var isEquip = tipo === 'equipamento';
+  return '<div class="skill-form-item">' +
+    '<div class="form-row" style="margin-bottom:6px;"><label>Tipo do Card</label><select class="skill-tipo"><option value="skill"' + (!isEquip ? ' selected' : '') + '>Skill</option><option value="equipamento"' + (isEquip ? ' selected' : '') + '>Equipamento</option></select></div>' +
+    '<div class="form-row" style="margin-bottom:6px;"><label>Nome</label><input type="text" class="skill-nome" value="' + ha(nome || '') + '" placeholder="Ex: Aether Rasengan"></div>' +
+    '<div class="form-row" style="margin-bottom:6px;"><label>Descrição</label><textarea class="skill-desc" rows="3" spellcheck="false" placeholder="O que a habilidade ou equipamento faz...">' + h(descricao || '') + '</textarea></div>' +
+    '<button type="button" class="btn btn-small btn-danger" onclick="this.parentNode.remove()">Remover Card</button>' +
+    '</div>';
+}
+
+function adicionarSkillFormRow() {
+  var container = document.getElementById('p-skills-list');
+  container.insertAdjacentHTML('beforeend', skillFormRowHtml('', '', 'skill'));
+}
+
+function lerSkillsDoFormulario() {
+  var skills = [];
+  document.querySelectorAll('#p-skills-list .skill-form-item').forEach(function(item) {
+    var nome = item.querySelector('.skill-nome').value.trim();
+    var descricao = item.querySelector('.skill-desc').value.trim();
+    var tipo = item.querySelector('.skill-tipo').value === 'equipamento' ? 'equipamento' : 'skill';
+    if (nome || descricao) skills.push({ nome: nome, descricao: descricao, tipo: tipo });
+  });
+  return skills;
+}
+
 function lerFormPersonagem() {
   return {
     nome: document.getElementById('p-nome').value.trim(),
@@ -1053,6 +1110,7 @@ function lerFormPersonagem() {
     imagem: document.getElementById('p-imagem').value.trim(),
     descricao: getEditorContent('p-editor'),
     stats: lerStatsDoFormulario(),
+    skills: lerSkillsDoFormulario(),
     mascaraTier: document.getElementById('p-mascara-tier').value.trim()
   };
 }
@@ -1089,6 +1147,7 @@ function salvarEdicaoPersonagem(id) {
     p.imagem = dados.imagem;
     p.descricao = dados.descricao;
     p.stats = dados.stats;
+    p.skills = dados.skills;
     p.mascaraTier = dados.mascaraTier;
     saveDB();
     sessionStorage.removeItem('editPersonagemId');
@@ -1139,6 +1198,7 @@ function enviarPersonagemAoServidor(id) {
     imagem: p.imagem,
     descricao: p.descricao,
     stats: p.stats || {},
+    skills: p.skills || [],
     mascaraTier: p.mascaraTier || ''
   }, function(err, data) {
     if (err) { showAlert(err, 'error'); return; }
