@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { users, threads, categories, posts, personagens, comments } from "./schema";
+import { users, threads, categories, posts, personagens, comments, wikiPosts } from "./schema";
 
 // Relações entre as tabelas
 
@@ -20,6 +20,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 	posts: many(posts),
 	personagens: many(personagens),
 	comments: many(comments),
+	wikiPosts: many(wikiPosts),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -53,5 +54,12 @@ export const commentsRelations = relations(comments, ({ one }) => ({
 	personagen: one(personagens, {
 		fields: [comments.personagemId],
 		references: [personagens.id]
+	}),
+}));
+
+export const wikiPostsRelations = relations(wikiPosts, ({ one }) => ({
+	user: one(users, {
+		fields: [wikiPosts.authorId],
+		references: [users.id]
 	}),
 }));

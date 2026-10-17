@@ -151,3 +151,33 @@ export const comments = pgTable("comments", {
 		name: "comments_personagem_id_fkey"
 	}).onDelete("cascade"),
 ]);
+
+export const wikiPosts = pgTable("wiki_posts", {
+	id: uuid().primaryKey().notNull().defaultRandom(),
+	authorId: uuid("author_id").notNull(),
+
+	titulo: varchar({ length: 200 }).notNull(),
+	subtitulo: varchar({ length: 200 }).default(''),
+	categoria: varchar({ length: 80 }).default('Cena de RPG'),
+	status: varchar({ length: 80 }).default('Em Andamento'),
+	resumo: text().default(''),
+	banner: text().default(''),
+	descricao: text().default(''),
+	theme: jsonb().default({}),
+	infobox: jsonb().default({}),
+	blocks: jsonb().default([]),
+	turns: jsonb().default([]),
+
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow()
+		.notNull()
+		.$onUpdate(() => sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+	index("idx_wiki_posts_author_id").using("btree", table.authorId.asc().nullsLast()),
+	foreignKey({
+		columns: [table.authorId],
+		foreignColumns: [users.id],
+		name: "wiki_posts_author_id_fkey"
+	}),
+]);
+

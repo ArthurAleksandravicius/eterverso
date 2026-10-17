@@ -3,35 +3,56 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Éterverso</title>
+  <title>aetherverse vault</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div id="top-bar">
-  <div id="top-user-info">Bem-vindo, visitante!</div>
-  <div><span id="top-btn-area"></span></div>
-</div>
+<header id="site-header">
+  <div class="header-inner">
+    <div class="header-left">
+      <div id="logo-bar" onclick="navigate('forum')">
+        <h1>aetherverse vault</h1>
+      </div>
+
+      <nav id="nav-bar" aria-label="Navegação principal">
+        <button onclick="navigate('forum')" id="nav-forum">Fórum</button>
+        <button onclick="navigate('wiki')" id="nav-wiki">Personagens</button>
+        <button onclick="navigate('cenas')" id="nav-cenas">Cenas</button>
+        <button onclick="navigate('sobre')" id="nav-sobre">Sobre</button>
+        <span id="nav-admin-btn"></span>
+      </nav>
+    </div>
+
+    <div id="top-bar">
+      <div id="top-user-info"></div>
+      <div id="top-btn-area"></div>
+    </div>
+  </div>
+</header>
 
 <div id="wrapper">
-  <div id="logo-bar">
-    <h1>Éterverso</h1>
-    <p>Fórum, Wiki de Personagens &amp; Roleplay</p>
-  </div>
-  <div id="nav-bar">
-    <button onclick="navigate('forum')" id="nav-forum">Fórum</button>
-    <button onclick="navigate('wiki')" id="nav-wiki">Personagens</button>
-    <span id="nav-admin-btn"></span>
-  </div>
-  <div id="main"></div>
+  <main id="main"></main>
 </div>
 
-<div id="footer">
-  Éterverso &copy; 2026<br>
-  <a onclick="navigate('sobre')">Sobre o Projeto</a>
-</div>
+<footer id="footer">
+  <div class="footer-inner">
+    <span>aetherverse vault &copy; 2026</span>
+    <div class="footer-links">
+      <a onclick="navigate('forum')">Fórum</a>
+      <a onclick="navigate('wiki')">Personagens</a>
+      <a onclick="navigate('cenas')">Cenas</a>
+      <a onclick="navigate('sobre')">Sobre</a>
+    </div>
+  </div>
+</footer>
 
 <div id="modal-container"></div>
+<div id="lightbox-container"></div>
+<div id="toast-container"></div>
 
 <script src="editor.js"></script>
 <script src="app.js"></script>

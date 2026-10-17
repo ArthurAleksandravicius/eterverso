@@ -1,58 +1,68 @@
-function buildEditor(id, initialContent) {
+function buildEditor(id, initialContent, placeholderText) {
+  var ph = placeholderText || 'Escreva aqui...';
   var html = '';
-  html += '<div class="editor-wrap">';
+  html += '<div class="editor-wrap" id="wrap-' + id + '">';
   html += '<div class="editor-toolbar" id="tb-' + id + '">';
-  html += '<select class="editor-select" onchange="execCmd(\'formatBlock\',this.value,\'' + id + '\');this.value=\'p\'"><option value="p">Parágrafo</option><option value="h1">Título 1</option><option value="h2">Título 2</option><option value="h3">Título 3</option><option value="pre">Código</option></select>';
-  html += '<select class="editor-select" onchange="applyFont(\'' + id + '\',this.value);this.value=\'\'"><option value="">Fonte</option><option value="Verdana">Verdana</option><option value="Georgia">Georgia</option><option value="Times New Roman">Times</option><option value="Courier New">Courier</option></select>';
-  html += '<select class="editor-select" onchange="execCmd(\'fontSize\',this.value,\'' + id + '\');this.value=\'\'"><option value="">Tamanho</option><option value="2">Pequeno</option><option value="3">Normal</option><option value="4">Médio</option><option value="5">Grande</option><option value="6">Enorme</option></select>';
+  html += '<select class="editor-select" title="Formato de bloco" onchange="execCmd(\'formatBlock\',this.value,\'' + id + '\');this.value=\'p\'"><option value="p">Parágrafo</option><option value="h2">Título 1</option><option value="h3">Título 2</option><option value="h4">Subtítulo</option><option value="pre">Bloco de Código</option></select>';
+  html += '<select class="editor-select" title="Tipografia" onchange="applyFont(\'' + id + '\',this.value);this.value=\'\'"><option value="">Tipografia</option><option value="Inter, sans-serif">Sans (Inter)</option><option value="Lora, Georgia, serif">Serif (Lora)</option><option value="Georgia, serif">Clássica (Georgia)</option><option value="JetBrains Mono, monospace">Mono (JetBrains)</option></select>';
+  html += '<select class="editor-select" title="Tamanho da fonte" onchange="execCmd(\'fontSize\',this.value,\'' + id + '\');this.value=\'\'"><option value="">Tamanho</option><option value="2">Pequeno</option><option value="3">Normal</option><option value="4">Médio</option><option value="5">Grande</option><option value="6"> Destaque</option></select>';
   html += '<div class="sep"></div>';
-  html += '<button type="button" title="Negrito" onclick="execCmd(\'bold\',null,\'' + id + '\')"><b>N</b></button>';
-  html += '<button type="button" title="Itálico" onclick="execCmd(\'italic\',null,\'' + id + '\')"><i>I</i></button>';
-  html += '<button type="button" title="Sublinhado" onclick="execCmd(\'underline\',null,\'' + id + '\')"><u>S</u></button>';
-  html += '<button type="button" title="Tachado" onclick="execCmd(\'strikeThrough\',null,\'' + id + '\')"><s>T</s></button>';
-  html += '<button type="button" title="Limpar formatação" onclick="execCmd(\'removeFormat\',null,\'' + id + '\')">Tx</button>';
+  html += '<button type="button" title="Negrito (Ctrl+B)" onclick="execCmd(\'bold\',null,\'' + id + '\')"><b>B</b></button>';
+  html += '<button type="button" title="Itálico (Ctrl+I)" onclick="execCmd(\'italic\',null,\'' + id + '\')"><i>I</i></button>';
+  html += '<button type="button" title="Sublinhado (Ctrl+U)" onclick="execCmd(\'underline\',null,\'' + id + '\')"><u>U</u></button>';
+  html += '<button type="button" title="Tachado" onclick="execCmd(\'strikeThrough\',null,\'' + id + '\')"><s>S</s></button>';
+  html += '<button type="button" title="Limpar formatação" onclick="execCmd(\'removeFormat\',null,\'' + id + '\')">Limpar</button>';
   html += '<div class="sep"></div>';
-  html += '<button type="button" title="Alinhar à esquerda" onclick="execCmd(\'justifyLeft\',null,\'' + id + '\')">&#8676;</button>';
-  html += '<button type="button" title="Centralizar" onclick="execCmd(\'justifyCenter\',null,\'' + id + '\')">&#8644;</button>';
-  html += '<button type="button" title="Alinhar à direita" onclick="execCmd(\'justifyRight\',null,\'' + id + '\')">&#8677;</button>';
+  html += '<button type="button" title="Alinhar à esquerda" onclick="execCmd(\'justifyLeft\',null,\'' + id + '\')">Esq</button>';
+  html += '<button type="button" title="Centralizar" onclick="execCmd(\'justifyCenter\',null,\'' + id + '\')">Centro</button>';
+  html += '<button type="button" title="Alinhar à direita" onclick="execCmd(\'justifyRight\',null,\'' + id + '\')">Dir</button>';
   html += '<button type="button" title="Justificar" onclick="execCmd(\'justifyFull\',null,\'' + id + '\')">Just</button>';
   html += '<div class="sep"></div>';
-  html += '<button type="button" title="Lista com marcadores" onclick="execCmd(\'insertUnorderedList\',null,\'' + id + '\')">• Lista</button>';
+  html += '<button type="button" title="Lista com marcadores" onclick="execCmd(\'insertUnorderedList\',null,\'' + id + '\')">Lista</button>';
   html += '<button type="button" title="Lista numerada" onclick="execCmd(\'insertOrderedList\',null,\'' + id + '\')">1. Lista</button>';
-  html += '<button type="button" title="Recuar" onclick="execCmd(\'indent\',null,\'' + id + '\')">&gt;&gt;</button>';
-  html += '<button type="button" title="Voltar recuo" onclick="execCmd(\'outdent\',null,\'' + id + '\')">&lt;&lt;</button>';
+  html += '<button type="button" title="Bloco de citação" onclick="wrapTag(\'' + id + '\',\'blockquote\')">Citação</button>';
+  html += '<button type="button" title="Inserir fala / diálogo de RPG" onclick="openEditorDrawer(\'' + id + '\',\'dialogue\')">Diálogo</button>';
+  html += '<button type="button" title="Inserir caixa de destaque / nota" onclick="openEditorDrawer(\'' + id + '\',\'callout\')">Nota</button>';
+  html += '<button type="button" title="Inserir trecho oculto (spoiler)" onclick="openEditorDrawer(\'' + id + '\',\'spoiler\')">Spoiler</button>';
+  html += '<button type="button" title="Inserir divisor horizontal" onclick="execCmd(\'insertHorizontalRule\',null,\'' + id + '\')">Divisor</button>';
   html += '<div class="sep"></div>';
-  html += '<button type="button" title="Citação" onclick="wrapTag(\'' + id + '\',\'blockquote\')">Citar</button>';
-  html += '<button type="button" title="Spoiler" onclick="insertSpoiler(\'' + id + '\')">Spoiler</button>';
-  html += '<button type="button" title="Bloco de código" onclick="insertCodeBlock(\'' + id + '\')">Código</button>';
-  html += '<button type="button" title="Linha horizontal" onclick="execCmd(\'insertHorizontalRule\',null,\'' + id + '\')">Linha</button>';
+  html += '<button type="button" title="Inserir link" onclick="openEditorDrawer(\'' + id + '\',\'link\')">Link</button>';
+  html += '<button type="button" title="Inserir imagem" onclick="openEditorDrawer(\'' + id + '\',\'image\')">Imagem</button>';
+  html += '<button type="button" title="Inserir tabela" onclick="openEditorDrawer(\'' + id + '\',\'table\')">Tabela</button>';
   html += '<div class="sep"></div>';
-  html += '<button type="button" title="Inserir link" onclick="insertLink(\'' + id + '\')">Link</button>';
-  html += '<button type="button" title="Inserir imagem" onclick="insertImage(\'' + id + '\')">Imagem</button>';
-  html += '<button type="button" title="Inserir tabela" onclick="insertTable(\'' + id + '\')">Tabela</button>';
+  html += '<select class="editor-select" title="Tom do texto" onchange="applyColor(\'' + id + '\',this.value);this.value=\'\'">';
+  html += '<option value="">Tom</option>';
+  html += '<option value="#ffffff">Branco</option>';
+  html += '<option value="#d4d4d8">Prata</option>';
+  html += '<option value="#a1a1aa">Cinza médio</option>';
+  html += '<option value="#71717a">Cinza escuro</option>';
+  html += '</select>';
+  html += '<label class="editor-color-picker" title="Cor personalizada">Cor<input type="color" value="#ffffff" onchange="applyColor(\'' + id + '\',this.value)"></label>';
   html += '<div class="sep"></div>';
-  html += '<select class="editor-select" onchange="applyColor(\'' + id + '\',this.value);this.value=\'\'"><option value="">Cor do texto</option><option value="#1a2860">Azul escuro</option><option value="#007700">Verde</option><option value="#aa0000">Vermelho</option><option value="#774400">Marrom</option><option value="#6644aa">Roxo</option><option value="#cc6600">Laranja</option><option value="#333333">Preto</option></select>';
-  html += '<select class="editor-select" onchange="applyBgColor(\'' + id + '\',this.value);this.value=\'\'"><option value="">Fundo</option><option value="#fff2aa">Amarelo</option><option value="#dff1ff">Azul claro</option><option value="#e7ffd9">Verde claro</option><option value="#ffdede">Vermelho claro</option><option value="#eeeeee">Cinza</option></select>';
-  html += '<div class="sep"></div>';
-  html += '<button type="button" title="Desfazer" onclick="execCmd(\'undo\',null,\'' + id + '\')">↶</button>';
-  html += '<button type="button" title="Refazer" onclick="execCmd(\'redo\',null,\'' + id + '\')">↷</button>';
+  html += '<button type="button" title="Alternar código HTML" onclick="toggleEditorHtmlMode(\'' + id + '\')" id="htmlbtn-' + id + '">HTML</button>';
+  html += '<button type="button" title="Expandir editor" onclick="toggleEditorFullscreen(\'' + id + '\')" id="fsbtn-' + id + '">Expandir</button>';
   html += '</div>';
-  html += '<div class="editor-body" id="' + id + '" contenteditable="true" spellcheck="false" data-placeholder="Escreva aqui..." oninput="updateEditorCount(\'' + id + '\')">' + (initialContent || '') + '</div>';
-  html += '<div class="editor-status"><span>Editor completo</span><span id="count-' + id + '">0 caracteres</span></div>';
+  html += '<div class="editor-drawer" id="drawer-' + id + '" style="display:none;"></div>';
+  html += '<div class="editor-body" id="' + id + '" contenteditable="true" spellcheck="false" data-placeholder="' + ph.replace(/"/g, '&quot;') + '" oninput="updateEditorCount(\'' + id + '\')">' + (initialContent || '') + '</div>';
+  html += '<textarea class="editor-source" id="src-' + id + '" style="display:none;" spellcheck="false" oninput="syncFromSource(\'' + id + '\')"></textarea>';
+  html += '<div class="editor-status"><span id="mode-' + id + '">Editor visual</span><span id="count-' + id + '">0 caracteres · 0 palavras</span></div>';
   html += '</div>';
-  setTimeout(function() { updateEditorCount(id); }, 50);
+  setTimeout(function() { updateEditorCount(id); }, 40);
   return html;
 }
+
 function execCmd(cmd, val, editorId) {
   var el = document.getElementById(editorId);
   if (el) el.focus();
   document.execCommand(cmd, false, val);
+  updateEditorCount(editorId);
 }
 
 function wrapTag(editorId, tag) {
   var el = document.getElementById(editorId);
   if (el) el.focus();
   document.execCommand('formatBlock', false, tag);
+  updateEditorCount(editorId);
 }
 
 function applyColor(editorId, color) {
@@ -76,55 +86,167 @@ function applyFont(editorId, fontName) {
   document.execCommand('fontName', false, fontName);
 }
 
-function insertLink(editorId) {
-  var url = prompt('URL do link:');
-  if (!url) return;
-  var el = document.getElementById(editorId);
-  if (el) el.focus();
-  document.execCommand('createLink', false, url);
-}
-
-function insertImage(editorId) {
-  var url = prompt('URL da imagem:');
-  if (!url) return;
-  var el = document.getElementById(editorId);
-  if (el) el.focus();
-  document.execCommand('insertImage', false, url);
-}
-
-function insertTable(editorId) {
-  var linhas = prompt('Quantas linhas?', '2');
-  var colunas = prompt('Quantas colunas?', '2');
-  linhas = parseInt(linhas);
-  colunas = parseInt(colunas);
-  if (!linhas || !colunas) return;
-  if (linhas < 1) linhas = 1;
-  if (colunas < 1) colunas = 1;
-  if (linhas > 8) linhas = 8;
-  if (colunas > 6) colunas = 6;
-
-  var html = '<table><tbody>';
-  for (var i = 0; i < linhas; i++) {
-    html += '<tr>';
-    for (var j = 0; j < colunas; j++) {
-      html += '<td>Texto</td>';
-    }
-    html += '</tr>';
+function openEditorDrawer(editorId, type) {
+  var d = document.getElementById('drawer-' + editorId);
+  if (!d) return;
+  if (d.style.display !== 'none' && d.getAttribute('data-dtype') === type) {
+    closeEditorDrawer(editorId);
+    return;
   }
-  html += '</tbody></table><p><br></p>';
-  insertHtml(editorId, html);
+  d.setAttribute('data-dtype', type);
+  var inner = '';
+  if (type === 'link') {
+    inner += '<div class="editor-drawer-row">';
+    inner += '<input type="text" id="ed-' + editorId + '-ltext" placeholder="Texto do link (opcional)">';
+    inner += '<input type="text" id="ed-' + editorId + '-lurl" placeholder="URL (https://...)">';
+    inner += '<button type="button" class="btn btn-small btn-primary" onclick="confirmEditorDrawer(\'' + editorId + '\',\'link\')">Inserir</button>';
+    inner += '<button type="button" class="btn btn-small" onclick="closeEditorDrawer(\'' + editorId + '\')">Cancelar</button>';
+    inner += '</div>';
+  } else if (type === 'image') {
+    inner += '<div class="editor-drawer-row">';
+    inner += '<input type="text" id="ed-' + editorId + '-iurl" placeholder="URL da imagem (https://...)">';
+    inner += '<input type="text" id="ed-' + editorId + '-icap" placeholder="Legenda opcional">';
+    inner += '<button type="button" class="btn btn-small btn-primary" onclick="confirmEditorDrawer(\'' + editorId + '\',\'image\')">Inserir</button>';
+    inner += '<button type="button" class="btn btn-small" onclick="closeEditorDrawer(\'' + editorId + '\')">Cancelar</button>';
+    inner += '</div>';
+  } else if (type === 'dialogue') {
+    inner += '<div class="editor-drawer-row">';
+    inner += '<input type="text" id="ed-' + editorId + '-dspeaker" placeholder="Personagem (opcional)" style="max-width:200px;">';
+    inner += '<input type="text" id="ed-' + editorId + '-dtext" placeholder="Fala do personagem...">';
+    inner += '<button type="button" class="btn btn-small btn-primary" onclick="confirmEditorDrawer(\'' + editorId + '\',\'dialogue\')">Inserir</button>';
+    inner += '<button type="button" class="btn btn-small" onclick="closeEditorDrawer(\'' + editorId + '\')">Cancelar</button>';
+    inner += '</div>';
+  } else if (type === 'callout') {
+    inner += '<div class="editor-drawer-row">';
+    inner += '<input type="text" id="ed-' + editorId + '-ctitle" placeholder="Título da nota" value="Nota" style="max-width:180px;">';
+    inner += '<input type="text" id="ed-' + editorId + '-cbody" placeholder="Conteúdo da nota ou observação...">';
+    inner += '<button type="button" class="btn btn-small btn-primary" onclick="confirmEditorDrawer(\'' + editorId + '\',\'callout\')">Inserir</button>';
+    inner += '<button type="button" class="btn btn-small" onclick="closeEditorDrawer(\'' + editorId + '\')">Cancelar</button>';
+    inner += '</div>';
+  } else if (type === 'spoiler') {
+    inner += '<div class="editor-drawer-row">';
+    inner += '<input type="text" id="ed-' + editorId + '-stext" placeholder="Texto que ficará oculto como spoiler...">';
+    inner += '<button type="button" class="btn btn-small btn-primary" onclick="confirmEditorDrawer(\'' + editorId + '\',\'spoiler\')">Inserir</button>';
+    inner += '<button type="button" class="btn btn-small" onclick="closeEditorDrawer(\'' + editorId + '\')">Cancelar</button>';
+    inner += '</div>';
+  } else if (type === 'table') {
+    inner += '<div class="editor-drawer-row">';
+    inner += '<input type="number" id="ed-' + editorId + '-trows" min="1" max="12" value="3" placeholder="Linhas" style="max-width:110px;">';
+    inner += '<input type="number" id="ed-' + editorId + '-tcols" min="1" max="6" value="3" placeholder="Colunas" style="max-width:110px;">';
+    inner += '<button type="button" class="btn btn-small btn-primary" onclick="confirmEditorDrawer(\'' + editorId + '\',\'table\')">Criar Tabela</button>';
+    inner += '<button type="button" class="btn btn-small" onclick="closeEditorDrawer(\'' + editorId + '\')">Cancelar</button>';
+    inner += '</div>';
+  }
+  d.innerHTML = inner;
+  d.style.display = 'block';
+  var firstInput = d.querySelector('input');
+  if (firstInput) firstInput.focus();
 }
 
-function insertSpoiler(editorId) {
-  var texto = prompt('Texto do spoiler:', 'spoiler');
-  if (!texto) return;
-  insertHtml(editorId, '<span class="spoiler">' + h(texto) + '</span>');
+function closeEditorDrawer(editorId) {
+  var d = document.getElementById('drawer-' + editorId);
+  if (d) {
+    d.style.display = 'none';
+    d.innerHTML = '';
+  }
 }
 
-function insertCodeBlock(editorId) {
-  var texto = prompt('Código ou trecho:');
-  if (!texto) return;
-  insertHtml(editorId, '<pre>' + h(texto) + '</pre><p><br></p>');
+function confirmEditorDrawer(editorId, type) {
+  if (type === 'link') {
+    var lurl = (document.getElementById('ed-' + editorId + '-lurl') || {}).value || '';
+    var ltext = (document.getElementById('ed-' + editorId + '-ltext') || {}).value || '';
+    lurl = lurl.trim();
+    if (!lurl) return;
+    if (ltext.trim()) {
+      insertHtml(editorId, '<a href="' + lurl.replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">' + h(ltext.trim()) + '</a> ');
+    } else {
+      var el = document.getElementById(editorId);
+      if (el) el.focus();
+      document.execCommand('createLink', false, lurl);
+    }
+  } else if (type === 'image') {
+    var iurl = (document.getElementById('ed-' + editorId + '-iurl') || {}).value || '';
+    var icap = (document.getElementById('ed-' + editorId + '-icap') || {}).value || '';
+    iurl = iurl.trim();
+    if (!iurl) return;
+    var fig = '<figure class="inline-media"><img src="' + iurl.replace(/"/g, '&quot;') + '" alt="Imagem">';
+    if (icap.trim()) fig += '<figcaption>' + h(icap.trim()) + '</figcaption>';
+    fig += '</figure><p><br></p>';
+    insertHtml(editorId, fig);
+  } else if (type === 'dialogue') {
+    var spk = (document.getElementById('ed-' + editorId + '-dspeaker') || {}).value || '';
+    var dtxt = (document.getElementById('ed-' + editorId + '-dtext') || {}).value || '';
+    if (!dtxt.trim()) return;
+    var dlg = '<div class="rp-dialogue">';
+    if (spk.trim()) dlg += '<div class="rp-dialogue-speaker">' + h(spk.trim()) + '</div>';
+    dlg += '<div class="rp-dialogue-text">&ldquo;' + h(dtxt.trim()) + '&rdquo;</div></div><p><br></p>';
+    insertHtml(editorId, dlg);
+  } else if (type === 'callout') {
+    var ctitle = (document.getElementById('ed-' + editorId + '-ctitle') || {}).value || 'Nota';
+    var cbody = (document.getElementById('ed-' + editorId + '-cbody') || {}).value || '';
+    if (!cbody.trim()) return;
+    var cal = '<div class="rp-callout"><div class="rp-callout-title">' + h(ctitle.trim()) + '</div><div class="rp-callout-body">' + h(cbody.trim()) + '</div></div><p><br></p>';
+    insertHtml(editorId, cal);
+  } else if (type === 'spoiler') {
+    var stxt = (document.getElementById('ed-' + editorId + '-stext') || {}).value || '';
+    if (!stxt.trim()) return;
+    insertHtml(editorId, '<span class="spoiler" onclick="this.classList.toggle(\'revealed\')" title="Clique para revelar">' + h(stxt.trim()) + '</span>&nbsp;');
+  } else if (type === 'table') {
+    var rows = parseInt((document.getElementById('ed-' + editorId + '-trows') || {}).value, 10) || 2;
+    var cols = parseInt((document.getElementById('ed-' + editorId + '-tcols') || {}).value, 10) || 2;
+    rows = Math.max(1, Math.min(12, rows));
+    cols = Math.max(1, Math.min(6, cols));
+    var tbl = '<table><tbody>';
+    for (var r = 0; r < rows; r++) {
+      tbl += '<tr>';
+      for (var c = 0; c < cols; c++) {
+        tbl += '<td>' + (r === 0 ? '<b>Cabeçalho</b>' : 'Valor') + '</td>';
+      }
+      tbl += '</tr>';
+    }
+    tbl += '</tbody></table><p><br></p>';
+    insertHtml(editorId, tbl);
+  }
+  closeEditorDrawer(editorId);
+}
+
+function toggleEditorHtmlMode(editorId) {
+  var body = document.getElementById(editorId);
+  var src = document.getElementById('src-' + editorId);
+  var btn = document.getElementById('htmlbtn-' + editorId);
+  var mode = document.getElementById('mode-' + editorId);
+  if (!body || !src) return;
+  if (src.style.display === 'none') {
+    src.value = body.innerHTML;
+    body.style.display = 'none';
+    src.style.display = 'block';
+    if (btn) btn.classList.add('active');
+    if (mode) mode.textContent = 'Código HTML';
+  } else {
+    body.innerHTML = src.value;
+    src.style.display = 'none';
+    body.style.display = 'block';
+    if (btn) btn.classList.remove('active');
+    if (mode) mode.textContent = 'Editor visual';
+    updateEditorCount(editorId);
+  }
+}
+
+function syncFromSource(editorId) {
+  var body = document.getElementById(editorId);
+  var src = document.getElementById('src-' + editorId);
+  if (body && src) {
+    body.innerHTML = src.value;
+    updateEditorCount(editorId);
+  }
+}
+
+function toggleEditorFullscreen(editorId) {
+  var wrap = document.getElementById('wrap-' + editorId);
+  var btn = document.getElementById('fsbtn-' + editorId);
+  if (!wrap) return;
+  var isFs = wrap.classList.toggle('editor-fullscreen');
+  if (btn) btn.textContent = isFs ? 'Reduzir' : 'Expandir';
 }
 
 function insertHtml(editorId, html) {
@@ -138,11 +260,17 @@ function updateEditorCount(editorId) {
   var el = document.getElementById(editorId);
   var count = document.getElementById('count-' + editorId);
   if (!el || !count) return;
-  var texto = el.textContent || '';
-  count.textContent = texto.length + ' caracteres';
+  var texto = (el.textContent || '').trim();
+  var words = texto ? texto.split(/\s+/).length : 0;
+  var readMin = Math.max(1, Math.ceil(words / 200));
+  count.textContent = texto.length + ' caracteres · ' + words + ' palavras' + (words > 30 ? ' · ~' + readMin + ' min de leitura' : '');
 }
 
 function getEditorContent(id) {
+  var src = document.getElementById('src-' + id);
   var el = document.getElementById(id);
+  if (src && src.style.display !== 'none') {
+    return src.value;
+  }
   return el ? el.innerHTML : '';
 }
