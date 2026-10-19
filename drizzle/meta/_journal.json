@@ -43,6 +43,13 @@
       "when": 1783270245377,
       "tag": "0005_nebulous_jubilee",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792204868000,
+      "tag": "0006_wiki_posts_and_blocks",
+      "breakpoints": true
     }
   ]
 }
