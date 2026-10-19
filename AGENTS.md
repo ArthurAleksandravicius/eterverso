@@ -4,6 +4,10 @@
 
 - Read `README.md` for setup, the code map, and current limitations. Inspect
   the current code before relying on an old chat or announcement.
+- For the wiki/shared-state implementation, start with
+  `docs/planning/EXECUTION.md` and its linked contracts/runbook. Continue from
+  `docs/planning/EXECUTION_STATE.md`; planning review is not evidence that
+  implementation milestones or their tests have passed.
 - The site is called **aetherverse vault**. It supports a shared fictional
   universe through a forum, character profiles, and collaborative RPG scenes.
 - The user is new to this project. Explain unfamiliar concepts in plain
