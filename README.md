@@ -1,98 +1,231 @@
 # Eterverso / aetherverse vault
 
-A Portuguese-language forum, character wiki, and collaborative text RPG site.
-The browser uses plain JavaScript, HTML, and CSS; Express serves the site and
-API; PostgreSQL stores accounts, characters, scenes, and scene turns.
+The aetherverse vault is a Portuguese-language forum, character wiki, reference
+wiki, and collaborative text RPG. The browser app uses plain JavaScript, HTML,
+and CSS. Express serves the app and API, and PostgreSQL stores shared accounts,
+forum content, characters, scenes, scene turns, and reference wiki data.
 
 ## Local development
 
-Requirements: Node.js 24 (use `nvm install` and `nvm use` if you have nvm),
-npm, and Docker with Docker Compose.
+Use Node.js 24 from `.nvmrc`, npm, and Docker Compose. Select Node 24 and install
+the locked dependencies:
 
 ```sh
 nvm use
 npm ci
-cp .env-example .env
 ```
 
-Edit `.env`: replace the password in both `POSTGRES_PASSWORD` and
-`DATABASE_URL`, and set a separate random `SESSION_SECRET`. You can generate
-each value with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
-The `.env` file is ignored by Git. Use a development database, since startup
-also executes schema updates.
+Check for an existing `.env` before creating one. If none exists, copy the
+template; otherwise preserve the existing file and edit it deliberately:
+
+```sh
+if [ ! -e .env ]; then
+  cp .env-example .env
+fi
+```
+
+Set a fresh local `POSTGRES_PASSWORD`, use the same value in `DATABASE_URL`,
+and set an independent random `SESSION_SECRET`. For example, generate a
+URL-safe random value in your terminal with:
+
+```sh
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+Keep `.env` and all generated credentials private; `.env` is ignored by Git.
+The example configuration points to the development database on
+`127.0.0.1:55432`.
+
+Start PostgreSQL and inspect the target before applying migrations:
 
 ```sh
 docker compose up -d --wait
-npm run db:migrate
+npm run db:preflight -- --target=development
+```
+
+Preflight reads the database schema and migration history and saves a private
+report under `.local/test/reports/`. Automatic migrations support an empty
+database or a precisely recognized schema state. An unknown or divergent
+database is refused for operator review. Before a development migration, the
+wrapper also requires a restricted baseline dump. Create it once, before the
+migration, without replacing an existing dump:
+
+```sh
+umask 077
+mkdir -p .local
+if [ ! -e .local/development-baseline.dump ]; then
+  docker compose exec -T db pg_dump -U eterverso -d eterverso -Fc > .local/development-baseline.dump
+fi
+chmod 600 .local/development-baseline.dump
+npm run db:migrate -- --target=development
+npm run db:preflight -- --target=development
+```
+
+The migration wrapper checks that the dump is a private, non-empty PostgreSQL
+custom archive and asks PostgreSQL to verify its table of contents names the
+`eterverso` database before running migrations. If the dump already exists,
+confirm that it belongs to this local database before relying on it. Do not
+replay migration SQL directly or try to repair an unsupported schema by editing
+its migration history. See
+[`docs/planning/verification-and-recovery.md`](docs/planning/verification-and-recovery.md)
+for supported migration paths and recovery steps.
+
+Start the app after preflight confirms the required schema:
+
+```sh
 npm run dev
 ```
 
-Open <http://localhost:3000>. The PostgreSQL port is `55432`, bound to localhost.
-To stop the app, press Ctrl+C. To stop the database, run `docker compose down`;
-the named volume retains your data. On subsequent starts, run `nvm use`,
-`docker compose up -d --wait`, and `npm run dev`.
+Open <http://localhost:3000>. Startup loads the existing `.env` and checks
+schema readiness; it does not create or alter database structures. Stop the
+app with Ctrl+C. `docker compose down` stops PostgreSQL and preserves its named
+development volume. Do not remove that volume as routine cleanup.
 
-Register an account through the site. New accounts are members. To test wiki
-editing, promote only your own local development account, replacing the
-username below:
+### Local administrator
+
+Register your own account in the running local app. Find its UUID in the local
+database, replacing the sample username:
 
 ```sh
 docker compose exec db psql -U eterverso -d eterverso \
-  -c "UPDATE users SET role = 'admin' WHERE username = 'your-local-username';"
+  -c "SELECT id, username FROM users WHERE username = 'your-local-username';"
 ```
 
-Sign out and back in to refresh the role shown by the browser. The sample
-Admin and moderator profiles embedded in `app.js` are local display data,
-not usable database login accounts.
+Use that UUID to bootstrap the first local administrator. Confirm `.env`
+points to the local development database before running this command:
+
+```sh
+env -u DATABASE_URL node scripts/bootstrap-admin.js \
+  --user-id 'UUID-from-the-query' \
+  --operator 'local setup' \
+  --reason 'first local administrator' \
+  --database-name eterverso \
+  --env-file .env
+```
+
+The command records the operator and reason, and refuses if an active
+administrator already exists. Sign out and back in after bootstrap. Manage
+later account roles through the authenticated admin interface.
+
+## Tests
+
+Tests use a separate PostgreSQL 17 service and database. The test setup reads
+the existing `.env` but does not create or replace it. It stores generated
+test-only credentials under ignored `.local/test/`, chooses a free loopback
+port starting at `55433`, and checks that test runners target that isolated
+service. Unit tests need no database; integration and browser tests need the
+isolated service and schema, plus the local development database for a
+read-only sentinel check. These runs compare that sentinel before and after.
+
+```sh
+npm run test:env:up
+npm run db:preflight -- --target=test
+npm run db:migrate -- --target=test
+npm run test:unit
+npm run test:integration
+npm run test:browser
+```
+
+The supported entry points are:
+
+| Command | Runs |
+| --- | --- |
+| `npm run test:env:up` | Starts the isolated test database and prepares private test configuration |
+| `npm run test:unit` | Unit tests; no database or browser required |
+| `npm run test:integration` | PostgreSQL and HTTP integration tests on the isolated test database |
+| `npm run test:browser` | Playwright browser tests on the isolated test database |
+| `npm run test:migration:populated` | Synthetic populated-baseline migration check in a disposable test-only database |
+| `npm test` | Unit and integration suites |
+| `npm run test:all` | Unit, integration, and browser suites |
+| `npm run test:env:down` | Stops the test service and keeps its test-only named volume |
+
+If Playwright reports that Chromium is missing, install it with
+`npx playwright install chromium`. Do not point tests at the development
+database or remove its volume.
+
+To check a populated schema upgrade, `npm run test:migration:populated`
+restores the private verified 0006 baseline into a uniquely named disposable
+test database, adds synthetic records, applies migrations, and compares the
+preserved content before dropping the temporary database. It never targets
+the development database. The execution checkpoint records the latest test
+counts and acceptance-gate status; do not infer a gate passed from a command
+that was not run.
+
+### Private wiki sources
+
+Source archives can be staged without publishing their text:
+
+```sh
+npm run wiki:sources:stage -- --archive /path/to/source-package.zip
+```
+
+The script writes private files and a hash manifest under ignored
+`.local/wiki-sources/`. If an entry already exists, it preserves existing
+edits and reports that condition. Importing a staged manifest stores source
+records in an explicitly named loopback database and requires an active
+moderator UUID:
+
+```sh
+npm run wiki:sources:import -- \
+  --manifest .local/wiki-sources/YOUR_ARCHIVE_SHA256/manifest.json \
+  --database-name eterverso \
+  --imported-by YOUR_MODERATOR_UUID \
+  --env-file .env
+```
+
+Imported sources are private research material. They do not create or publish
+wiki articles; real lore publication still requires an editorial review.
 
 ## Code map
 
 | Path | Responsibility |
 | --- | --- |
-| `index.html` | Page shell and navigation |
-| `app.js` | Screens, browser state, API calls, example content |
-| `editor.js` | Rich-text editor |
-| `style.css` | Layout and styling |
-| `server.js` | Static files, authentication, permissions, API and SQL |
-| `db/schema.ts`, `db/relations.ts` | Drizzle table and relation definitions |
-| `drizzle/` | Versioned database migrations |
+| `index.html`, `app.js`, `editor.js`, `style.css` | Page shell, screens, browser behavior, rich-text editor, and styling |
+| `client/api.js` | Browser API requests, session, and CSRF handling |
+| `server.js` | Loads configuration, checks database readiness, and starts Express |
+| `server/app.js` | Express app factory and shared auth, profile, character, and scene routes |
+| `server/forum.js`, `server/admin.js` | Shared forum and administrator routes |
+| `server/wiki.js`, `server/proposals.js`, `server/sources.js` | Reference wiki, member proposals, and restricted source routes |
+| `server/legacy-import.js`, `server/scene-turn-normalizer.js` | Controlled legacy content import and scene-turn migration logic |
+| `db/schema.ts`, `db/relations.ts`, `drizzle/` | Drizzle schema definitions and versioned PostgreSQL migrations |
+| `scripts/`, `tests/`, `compose.test.yaml` | Migration preflight, bootstrap and recovery tools, source staging, test runners, and isolated test database |
 
-Runtime queries use the `postgres` client directly in `server.js`.
-Drizzle provides schema and migration tooling; the server does not use
-`db/index.ts` for its queries.
+Runtime queries use the `postgres` client directly; the server does not use
+`db/index.ts` for runtime queries. The reference wiki has separate page and
+revision tables. The existing `wiki_posts` records are used by the app for
+collaborative RPG scenes and turns.
 
-## Current limitations
+## Current status and limitations
 
-- Forum topics, replies, and some administration actions still save only to
-  the browser's localStorage. They are not shared between devices.
-- Character and scene lists can merge database records with local examples.
-  Local records have numeric IDs; database records use UUID strings.
-- `server.js` still creates the scene table and extra character columns at
-  startup. The Drizzle schema and snapshots do not yet describe all of those
-  structures consistently. Review generated SQL before applying any future
-  `db:generate` output. Migration `0006` is registered so a fresh database
-  receives the existing scene and character additions through `db:migrate`.
-- Images use external URLs. There is no bundled media upload service.
-- There is no automated test suite in this repository yet.
+Forum categories, topics, replies, moderation, and reference wiki pages are
+server-backed. Accounts, profiles, characters, RPG scenes, and scene turns
+also use PostgreSQL. Browser storage remains for local drafts, preferences,
+and legacy recovery; it is not the shared source of forum or wiki content.
 
-## Contribution workflow
+Current test results, completed acceptance gates, and remaining limitations
+are recorded in [`docs/planning/EXECUTION_STATE.md`](docs/planning/EXECUTION_STATE.md).
+Legacy import uses controlled, reviewed procedures and synthetic tests; no real
+browser export has been imported. Real-data attribution, source reconciliation,
+production migration, upstream merging, deployment, and public lore publication
+remain separate pending decisions. Do not treat the planning review as evidence
+that implementation gates have passed.
 
-Work on a branch rather than `main`:
+## Contributing
+
+Work on a feature branch. `origin` should point to your fork of
+`ArthurAleksandravicius/eterverso`; `upstream` is the original
+`Dilligent-Yard/eterverso` repository. Publish branches to your fork and open
+pull requests against `Dilligent-Yard/eterverso:main`.
 
 ```sh
 git switch -c your-name/short-change-description
-# Make and check a small change.
+# Make and check a focused change.
 git add path/to/changed-file
 git commit -m "Describe the change"
 git push -u origin HEAD
 ```
 
-Then open a pull request from your branch to the original repository's `main`.
-Pushing to the original repository requires write access. If you do not have
-it, fork the repository on GitHub and push your branch to that fork, then open
-a pull request from your fork to `Dilligent-Yard/eterverso:main`.
-
-For a basic local check, confirm the home page loads, register and sign in,
-and verify `/api/personagens` and `/api/wiki-posts` return JSON. If testing
-as an administrator, create, edit, reload, and delete a test character or
-scene to verify persistence.
+Preserve the Portuguese interface and existing RPG terminology. For shared
+state changes, enforce permissions in the server and verify persistence with
+the isolated test database. Keep credentials, private recovery exports, and
+private source material out of Git.

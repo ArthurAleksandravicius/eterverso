@@ -19,22 +19,24 @@
 
 ## Architecture and persistence
 
-- `index.html` is the page shell; `app.js` renders screens, manages browser
-  state, and calls the API. `editor.js` implements the rich-text editor;
-  `style.css` defines the appearance.
-- `server.js` serves static files and implements authentication, authorization,
-  API routes, and SQL using Express and the `postgres` client.
-- `db/schema.ts`, `db/relations.ts`, and `drizzle/` provide Drizzle schema and
-  migration tooling. Runtime server queries do not use `db/index.ts`.
-- Forum topics, replies, and some administration actions still use browser
-  localStorage. Accounts, server-backed characters, scenes, and scene turns
-  use PostgreSQL. Do not describe local-only actions as shared persistence.
-- Character and scene lists can combine local examples with database records.
-  Local records use numeric IDs; database records use UUID strings. Preserve
-  this distinction when changing lookup, editing, or deletion behavior.
-- The server still creates some structures during startup. Drizzle schema
-  definitions and snapshots are not fully aligned with these additions.
-  Inspect generated SQL carefully; do not apply unrelated generated changes.
+- `index.html` is the page shell; `app.js` renders screens and manages
+  navigation. `client/api.js` handles browser API/session requests,
+  `editor.js` implements the rich-text editor, and `style.css` defines the
+  appearance.
+- `server.js` loads configuration, checks schema readiness, and starts the
+  app. It must not perform schema changes. `server/app.js` builds the Express
+  app; feature routers in `server/` implement shared forum, administration,
+  wiki, proposal, source, character, scene, and recovery/import behavior using
+  injected SQL and the `postgres` client.
+- Accounts, forum topics/replies, administrative changes, characters, scenes,
+  scene turns, wiki revisions, and proposals are server-backed in PostgreSQL.
+  Browser storage is for account-scoped drafts, preferences, and the separate
+  legacy recovery workflow; never present a browser-only write as shared
+  persistence or merge old samples into canonical server lists.
+- `db/schema.ts`, `db/relations.ts`, and versioned SQL under `drizzle/` define
+  the schema and migrations. Runtime queries use `postgres` directly, not
+  `db/index.ts`. Inspect generated SQL and migration diffs carefully; do not
+  apply unrelated generated changes.
 - Enforce shared-data permissions on the server. Browser role checks control
   the interface but cannot substitute for server authorization.
 
@@ -46,21 +48,35 @@
 - Install dependencies with `npm ci`.
 - Check for an existing `.env` before creating one. Never overwrite working
   credentials or include secrets in output, commits, or documentation.
-- The provided Compose configuration creates an isolated PostgreSQL 17
-  development database on `127.0.0.1:55432` with a persistent named volume.
-- Start it with `docker compose up -d --wait`, apply migrations with
-  `npm run db:migrate`, and start the site with `npm run dev`.
+- The development Compose configuration uses PostgreSQL 17 on
+  `127.0.0.1:55432` with a persistent named volume. The separate
+  `compose.test.yaml` service is for isolated tests.
+- Start development PostgreSQL with `docker compose up -d --wait`; inspect it
+  with `npm run db:preflight -- --target=development` before any migration.
+  Apply only the migration procedure documented in
+  `docs/planning/verification-and-recovery.md`, then run `npm run dev`.
 - The default site address is `http://localhost:3000`. Check whether a server
   is already running before launching another instance on that port.
-- Use a development database for setup and smoke checks. Startup executes
-  schema updates, so starting the server is not a read-only database action.
+- Server startup checks the applied migration history and required schema but
+  does not run DDL. Database preflight/migration commands are writes and must
+  target the intended database explicitly.
 - Do not remove the database volume as routine setup or cleanup.
 
 ## Verification
 
-- There are currently no npm test or lint scripts. Do not report them as run.
+- `npm run test:unit`, `npm run test:integration`, `npm run test:browser`, and
+  `npm run test:all` are available. Integration and browser suites require the
+  isolated test database; use `npm run test:env:up`, test-target preflight,
+  and test-target migration as documented in the README. The guarded runners
+  compare a read-only development database sentinel before and after.
+- `npm run test:migration:populated` exercises a synthetic populated baseline
+  in a disposable test-only database. It does not migrate real user data.
 - For JavaScript changes, run `node --check` on the changed JavaScript files.
   Run `git diff --check` for whitespace errors.
+- Run the relevant unit, integration, and browser suites for changed behavior;
+  do not report a skipped suite as passed. See `docs/planning/EXECUTION.md`
+  and `docs/planning/EXECUTION_STATE.md` for the current acceptance gates and
+  evidence.
 - Verify affected user flows. For UI changes, inspect the actual screen in a
   browser. For API or persistence changes, check request responses, permission
   failures, and that saved data survives a fresh read or page reload.

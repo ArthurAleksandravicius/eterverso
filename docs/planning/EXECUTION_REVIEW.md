@@ -53,3 +53,38 @@ The test-ID matrix spans several milestones. A compact milestone-to-test mapping
 ## Limits
 
 This review did not access production, run migrations/tests, import actual lore or browser data, exercise a new application, or verify future model execution identities. Runtime behavior remains unimplemented. The original ZIP is available in the recorded local path; actual multi-browser recovery and deployed migration state remain outside the present evidence.
+
+## Implementation review — 20 October 2026
+
+The principal requested a read-only review using `gpt-6.1-sol` / `high` of the
+actual worktree changes against `EXECUTION.md`, the implementation contracts,
+the verification runbook, and the reported test evidence. This records the
+requested model configuration and returned review; it is not an independent
+measurement of model identity or capability. The reviewer did not access
+production, `.env`, `.local/`, or run database/browser tests.
+
+### P2 — CLOSED: expanded canonical imports must advance an existing forum sequence
+
+The reviewer found that a second job selecting additional posts from an
+already imported canonical snapshot could insert the next historical post at
+the number still reserved by `threads.next_post_no`. The next normal forum
+reply would then fail the unique `(thread_id, post_no)` constraint.
+
+`server/legacy-import.js` now locks affected existing categories and topics in
+the forum's actor → sorted categories → sorted topics order, rechecks moved,
+archived, locked, and quarantined targets under those locks, then reconciles
+`next_post_no` to at least one greater than the highest persisted post number
+without lowering a higher allocation. It refreshes the affected topic's
+activity timestamp. `tests/integration/legacy-import.test.js` adds a real
+PostgreSQL regression: import only the opening post, replay the same canonical
+content with an expanded selection, then verify the normal reply receives
+post number 3.
+
+The reviewer performed a narrow read-only follow-up and confirmed the finding
+closed, including the lock order, parent revalidation, sequence update, and
+regression. No other consequential finding was reported. The full suite was
+rerun after the correction: 110 unit tests, 37 PostgreSQL/HTTP integration
+tests, and 13 browser tests passed; the runner reported the development DB
+sentinel unchanged. `git diff --check` and JavaScript syntax checks also pass.
+The populated MIG-02 and synthetic BACK-01 evidence recorded in
+`EXECUTION_STATE.md` remains applicable; neither was altered by this fix.

@@ -39,6 +39,7 @@ Create documented scripts during M0/M1:
 | `npm run test:env:down` | Stop only the recorded test service; never `docker system prune` |
 | `npm run db:preflight` | Read-only schema/history report for an explicit target |
 | `npm run db:migrate` | Preflight-gated migration wrapper, no blind legacy replay |
+| `npm run test:migration:populated` | Restore the restricted verified 0006 baseline into a generated test-only scratch DB, seed synthetic records, apply additive migrations, compare preserved data, and drop the scratch DB |
 
 The app factory lets HTTP tests bind an ephemeral local port and close the
 server/SQL pool in teardown. Test helpers acquire session/CSRF tokens through
