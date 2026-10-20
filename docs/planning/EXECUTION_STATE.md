@@ -4,17 +4,19 @@ Update this file in place; do not create competing state/checkpoint documents.
 
 ## Current phase
 
-The authorized implementation of `docs/planning/EXECUTION.md` is integrated
-in the working tree and has passed the complete local test suite. The required
-independent review of the actual implementation is complete; its one P2
-finding was fixed, regression-tested, and closed on follow-up review. The
-remaining steps are final staging checks, commit, and push to the user's fork.
+The authorized implementation of `docs/planning/EXECUTION.md` is complete.
+The required independent review of the actual implementation is complete; its
+one P2 finding was fixed, regression-tested, and closed on follow-up review.
+Implementation commit `343845b` (`Move forum and lore wiki to shared server
+state`) was pushed to the user's fork and verified at
+`origin/arthur/local-setup` on 20 October 2026. No pull request was created.
 
 Branch: `arthur/local-setup`, tracking `origin/arthur/local-setup`. `origin` is
 Arthur's fork and `upstream` is the original project. The initial HEAD for this
 work was `6f57579` (`Prepare reviewed execution brief for shared state and
-wiki`). Implementation changes are currently uncommitted. Preserve ignored
-`.env`, `.local/` recovery/source material, and user data; do not stage them.
+wiki`). The implementation is committed; this checkpoint is recorded in a
+small follow-up documentation commit. Preserve ignored `.env`, `.local/`
+recovery/source material, and user data; do not stage them.
 
 ## Confirmed decisions and exclusions
 
@@ -35,15 +37,17 @@ wiki`). Implementation changes are currently uncommitted. Preserve ignored
   procedures, worker ownership, and acceptance-test matrix.
 - Independent review of the execution brief was completed on 19 October.
   R1/R2 were corrected and checked closed; see `EXECUTION_REVIEW.md`. That
-  brief review is separate from the required implementation review below.
+  brief review is separate from the implementation review and disposition
+  recorded later in `EXECUTION_REVIEW.md`.
 
 ## Implementation and verification status
 
 Implemented M0–M8 surfaces are integrated on Node 24.22.0 with PostgreSQL 17
 test infrastructure. `npm run test:all` completed successfully on 20 October,
 after the final review fix: 18 unit test files (110 tests), 37 PostgreSQL/HTTP
-integration tests, and 13 Playwright browser tests. The final browser run passed draft
-recovery/failure cases for profile, characters, scenes, turns, forum and wiki,
+integration tests, and 13 Playwright browser tests. The final browser run
+passed draft recovery/failure cases for profile, characters, scenes, turns,
+forum and wiki,
 as well as shared forum use, wiki reader/proposal/staff flows, hostile HTML,
 and mobile layout. The guarded runner confirmed the development database
 sentinel was unchanged.
@@ -80,7 +84,7 @@ Additional gates completed:
 | M5 | Published wiki snapshots, staff drafts/history, aliases/redirects, categories/search/backlinks and restore-to-draft implemented; WIK and browser coverage passes. |
 | M6 | Private member proposals, staff review, stale-base conflicts, attribution and discussion links implemented; PRO/WIK and browser coverage passes. |
 | M7 | Restricted source staging/import and private pilot material implemented; SRC tests and private manifest checks pass. Actual lore publication remains pending. |
-| M8 | Full suite, populated migration, BACK-01, documentation and final syntax/whitespace checks pass. Sol 6.1 / High review found one P2 importer sequence defect; fix and regression pass, and targeted follow-up confirmed closure. |
+| M8 | Full suite, populated migration, BACK-01, documentation and final syntax/whitespace checks pass. Sol 6.1 / High review found one P2 importer sequence defect; the fix and regression pass, targeted follow-up confirmed closure, and implementation commit `343845b` is pushed. |
 
 These are local implementation results, not production migration or deployment
 evidence. The browser tests exercise synthetic accounts and content against the
@@ -109,8 +113,7 @@ source text.
 
 ## Next action
 
-Stage only intended source/docs, verify `.env` and `.local/` are excluded,
-create the implementation commit and push only to `origin/arthur/local-setup`.
-The review and its closed finding are recorded in `EXECUTION_REVIEW.md`. Report
-commit/push status. Leave production deployment, upstream merge and actual
-lore publication pending.
+The local implementation is complete and its branch is pushed. The review and
+closed finding are recorded in `EXECUTION_REVIEW.md`. Production deployment,
+merging into upstream, actual lore import/publication, and real author/canon
+decisions remain pending for a later explicit project step.
