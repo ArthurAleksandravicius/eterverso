@@ -141,4 +141,9 @@ function createSourceRouter({ sql, auth } = {}) {
   return router;
 }
 
-module.exports = { createSourceRouter };
+module.exports = {
+  MAX_SOURCE_BYTES,
+  archiveRelativePath,
+  createSourceRouter,
+  hash,
+};

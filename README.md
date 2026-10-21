@@ -176,6 +176,31 @@ npm run wiki:sources:import -- \
 Imported sources are private research material. They do not create or publish
 wiki articles; real lore publication still requires an editorial review.
 
+### Portable wiki transfers
+
+Administrators can export selected wiki pages from the Admin area as an
+`AetherverseWikiBundleV1` JSON file. The bundle carries each selected page's
+current revision snapshot and citations, plus only the source documents cited
+by those revisions. Source records include archive/path identifiers and
+content hashes so the receiving database can reuse an exact match or report a
+collision. The format does not carry accounts, passwords, sessions, roles, or
+local user IDs.
+
+To transfer pages, download the bundle from the source site, then upload it in
+the destination site's Wiki Transfers panel. Review the preview, resolve any
+source or page conflicts, refresh the preview if the destination changed, and
+explicitly commit the selected pages and their complete citation-source set.
+An import creates private source records and unpublished staff drafts; it does
+not overwrite an edited page or publish lore. Continue editing through the
+normal wiki revision workflow, and publish only after the usual editorial
+review.
+
+Import jobs retain the validated bundle, including its cited source text, in
+the database so previews and commits can be audited and retried. The job and
+its bundle are available only through admin-authenticated transfer routes.
+Treat downloaded bundles and database backups as private source material. No
+transfer to Render has been performed as part of local development.
+
 ## Code map
 
 | Path | Responsibility |
@@ -186,6 +211,7 @@ wiki articles; real lore publication still requires an editorial review.
 | `server/app.js` | Express app factory and shared auth, profile, character, and scene routes |
 | `server/forum.js`, `server/admin.js` | Shared forum and administrator routes |
 | `server/wiki.js`, `server/proposals.js`, `server/sources.js` | Reference wiki, member proposals, and restricted source routes |
+| `server/wiki-transfers.js` | Admin-only, versioned wiki bundle export, preview, refresh, and commit |
 | `server/legacy-import.js`, `server/scene-turn-normalizer.js` | Controlled legacy content import and scene-turn migration logic |
 | `db/schema.ts`, `db/relations.ts`, `drizzle/` | Drizzle schema definitions and versioned PostgreSQL migrations |
 | `scripts/`, `tests/`, `compose.test.yaml` | Migration preflight, bootstrap and recovery tools, source staging, test runners, and isolated test database |

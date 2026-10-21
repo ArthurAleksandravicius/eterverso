@@ -288,6 +288,18 @@ var cenasFilterStatus = 'all';
 var turnSortOrder = 'asc';
 var adminState = { users: [], categories: [], events: [], userPage: { limit: 50, offset: 0, hasMore: false }, loading: false, loaded: false, error: null };
 var adminLoadSequence = 0;
+var adminWikiTransferState = createAdminWikiTransferState();
+
+function createAdminWikiTransferState() {
+  return {
+    pages: [], pagesLoading: false, pagesLoaded: false, pagesError: null,
+    exportPageIds: [], exportPending: false, exportError: null, exportMessage: null,
+    fileName: '', bundle: null, importPending: false, importError: null,
+    importId: null, importVersion: null, importPlanHash: null, importPreview: null,
+    importPageIds: [], importConfirmed: false, refreshPending: false,
+    commitPending: false, commitError: null, commitMessage: null, commitReport: null,
+  };
+}
 
 function routePath(page, extra) {
   if (page === 'forum') return '/forum';
@@ -1982,6 +1994,7 @@ function clearWikiDraft(kind, resourceId, accountId) {
 }
 
 function clearWikiTransientState() {
+  adminWikiTransferState = createAdminWikiTransferState();
   serverWikiPages = null;
   serverWikiCategories = null;
   wikiCategoriesLoading = false;
@@ -4968,6 +4981,7 @@ function renderSobre() {
 
 function renderAdmin() {
   if (!isAdmin()) return '<div class="alert alert-error">Acesso negado.</div>';
+  if (!adminWikiTransferState.pagesLoaded && !adminWikiTransferState.pagesLoading) loadAdminWikiTransferPages(false);
   if (!adminState.loaded && !adminState.loading) loadAdminData(false);
   if (adminState.loading && !adminState.loaded) return '<div class="breadcrumb">Início / Painel Admin</div><div class="alert alert-info">Carregando dados administrativos do servidor…</div>';
   if (adminState.error && !adminState.loaded) {
@@ -5010,6 +5024,8 @@ function renderAdmin() {
   html += '<div class="form-row"><label>Motivo administrativo</label><input id="admin-category-reason" maxlength="1000"></div>';
   html += '</div><button class="btn btn-primary" onclick="createAdminCategory()">Criar categoria</button></div>';
 
+  html += renderAdminWikiTransfers();
+
   html += '<div class="cat-header"><span>Auditoria recente</span></div>';
   html += '<div style="overflow-x:auto"><table class="forum-table"><thead><tr><th>Data</th><th>Operador</th><th>Ação</th><th>Alvo</th><th>Motivo</th></tr></thead><tbody>';
   adminState.events.forEach(function(event) {
@@ -5017,6 +5033,511 @@ function renderAdmin() {
   });
   html += '</tbody></table></div>';
   return html;
+}
+
+function renderAdminWikiTransfers() {
+  var state = adminWikiTransferState;
+  var html = '<section class="builder-panel admin-wiki-transfers" id="admin-wiki-transfers" aria-labelledby="admin-wiki-transfers-title">';
+  html += '<div class="builder-panel-title"><h2 id="admin-wiki-transfers-title">Transferência da wiki</h2></div>';
+  html += '<p class="field-desc">Exporte revisões atuais da wiki ou analise um pacote portátil antes de importar. A importação não publica artigos.</p>';
+  html += '<div class="admin-wiki-transfer-grid">';
+
+  html += '<section class="wiki-transfer-panel" aria-labelledby="wiki-transfer-export-title">';
+  html += '<h3 id="wiki-transfer-export-title">Exportar páginas</h3>';
+  html += '<p class="field-desc">Cada página selecionada será exportada a partir da revisão atual.</p>';
+  if (state.pagesLoading && !state.pagesLoaded) {
+    html += '<p class="alert alert-info" role="status">Carregando páginas da wiki…</p>';
+  } else if (state.pagesError) {
+    html += '<p class="alert alert-error" role="alert">' + h(state.pagesError) + '</p>';
+    html += '<button type="button" class="btn btn-small" onclick="loadAdminWikiTransferPages(true)">Tentar novamente</button>';
+  } else if (!state.pages.length) {
+    html += '<p class="field-desc">Nenhuma página disponível para exportação.</p>';
+  } else {
+    html += '<div class="wiki-transfer-selection-actions">';
+    html += '<button type="button" class="btn btn-small" onclick="setAdminWikiTransferExportSelection(true)"' + (state.exportPending ? ' disabled' : '') + '>Selecionar todas</button>';
+    html += '<button type="button" class="btn btn-small" onclick="setAdminWikiTransferExportSelection(false)"' + (state.exportPending ? ' disabled' : '') + '>Limpar seleção</button>';
+    html += '<span id="wiki-transfer-export-selection-count" aria-live="polite">' + state.exportPageIds.length + ' selecionada(s)</span></div>';
+    html += '<fieldset class="wiki-transfer-page-list" id="wiki-transfer-export-pages"><legend class="sr-only">Páginas da wiki para exportação</legend>';
+    state.pages.forEach(function(page) {
+      var id = String(page.id || '');
+      if (!id) return;
+      var snapshot = page.head && page.head.snapshot ? page.head.snapshot : null;
+      var title = snapshot && snapshot.title || page.title || page.slug || 'Página sem título';
+      var sequence = page.head && page.head.sequence;
+      var detail = 'Revisão atual' + (Number.isInteger(sequence) ? ' #' + sequence : '');
+      if (page.archivedAt) detail += ' · arquivada';
+      else if (page.publishedRevisionId) detail += ' · ' + (page.accessLevel === 'public' ? 'publicada' : 'restrita');
+      else detail += ' · ainda não publicada';
+      var checked = state.exportPageIds.indexOf(id) !== -1 ? ' checked' : '';
+      html += '<label class="wiki-transfer-page" for="wiki-transfer-export-' + ha(id) + '">';
+      html += '<input type="checkbox" id="wiki-transfer-export-' + ha(id) + '" class="wiki-transfer-export-choice" value="' + ha(id) + '" onchange="setAdminWikiTransferExportPage(' + jsArg(id) + ',this.checked)"' + checked + (state.exportPending ? ' disabled' : '') + '>';
+      html += '<span class="wiki-transfer-page-copy"><strong>' + h(title) + '</strong><span>' + h(detail) + '</span>';
+      if (page.headRevisionId || (page.head && page.head.id)) html += '<code>' + h(page.headRevisionId || page.head.id) + '</code>';
+      html += '</span></label>';
+    });
+    html += '</fieldset>';
+  }
+  if (state.exportError) html += '<p class="alert alert-error" role="alert">' + h(state.exportError) + '</p>';
+  if (state.exportMessage) html += '<p class="alert alert-info" role="status">' + h(state.exportMessage) + '</p>';
+  html += '<button type="button" class="btn btn-primary" id="wiki-transfer-export-button" onclick="exportAdminWikiBundle()"' + (state.exportPending || !state.exportPageIds.length || !state.pagesLoaded ? ' disabled' : '') + '>';
+  html += state.exportPending ? 'Preparando exportação…' : 'Baixar pacote JSON';
+  html += '</button></section>';
+
+  html += '<section class="wiki-transfer-panel" aria-labelledby="wiki-transfer-import-title">';
+  html += '<h3 id="wiki-transfer-import-title">Importar pacote</h3>';
+  html += '<p class="field-desc">Escolha um arquivo JSON para gerar uma prévia com páginas, fontes, hashes e conflitos.</p>';
+  html += '<div class="form-row"><label for="wiki-transfer-file">Pacote JSON</label>';
+  html += '<input type="file" id="wiki-transfer-file" accept="application/json,.json" onchange="readAdminWikiTransferFile(this.files && this.files[0])">';
+  html += '</div>';
+  if (state.fileName) html += '<p class="wiki-transfer-file-name" aria-live="polite">Arquivo selecionado: ' + h(state.fileName) + '</p>';
+  if (state.importError) html += '<p class="alert alert-error" role="alert">' + h(state.importError) + '</p>';
+  html += '<div class="wiki-transfer-actions">';
+  html += '<button type="button" class="btn btn-primary" id="wiki-transfer-upload-button" onclick="startAdminWikiTransferImport()"' + (state.importPending || !state.bundle ? ' disabled' : '') + '>';
+  html += state.importPending ? 'Analisando pacote…' : 'Enviar e analisar';
+  html += '</button>';
+  if (state.importId) html += '<button type="button" class="btn btn-small" onclick="refreshAdminWikiTransferPreview()"' + (state.refreshPending || state.commitPending ? ' disabled' : '') + '>Atualizar prévia</button>';
+  if (state.importId || state.bundle) html += '<button type="button" class="btn btn-small" onclick="clearAdminWikiTransferImport()"' + (state.importPending || state.commitPending ? ' disabled' : '') + '>Descartar pacote</button>';
+  html += '</div>';
+  if (state.importPreview) html += renderAdminWikiTransferPreview();
+  html += '</section></div></section>';
+  return html;
+}
+
+function renderAdminWikiTransferPreview() {
+  var state = adminWikiTransferState;
+  var preview = state.importPreview || {};
+  var pages = Array.isArray(preview.pages) ? preview.pages : [];
+  var sources = Array.isArray(preview.sources) ? preview.sources : [];
+  var sourceMap = adminWikiTransferSourceMap(preview);
+  var selectedIds = state.importPageIds;
+  var html = '<div class="wiki-transfer-preview" id="wiki-transfer-preview">';
+  html += '<h4>Prévia da importação</h4>';
+  html += '<dl class="wiki-transfer-metadata">';
+  html += '<div><dt>Pacote de origem</dt><dd>' + h(preview.bundleId || 'Não informado') + '</dd></div>';
+  html += '<div><dt>Importação</dt><dd>' + h(state.importId || 'Não informada') + (preview.status ? ' · ' + h(adminWikiTransferActionLabel(String(preview.status).toLowerCase())) : '') + '</dd></div>';
+  html += '<div><dt>Versão da prévia</dt><dd>' + h(state.importVersion === null ? (preview.planVersion || 'Não informada') : state.importVersion) + '</dd></div>';
+  html += '<div><dt>Hash do plano</dt><dd><code>' + h(state.importPlanHash || preview.planHash || 'Não informado') + '</code></dd></div>';
+  html += '</dl>';
+  html += '<div class="wiki-transfer-count-grid"><div><strong>Páginas</strong><span>' + h(adminWikiTransferCounts(preview.pageCounts, pages)) + '</span></div>';
+  html += '<div><strong>Fontes</strong><span>' + h(adminWikiTransferCounts(preview.sourceCounts, sources)) + '</span></div></div>';
+
+  html += '<div class="wiki-transfer-preview-block"><h5>Páginas do pacote</h5>';
+  if (!pages.length) html += '<p class="field-desc">A prévia não contém páginas.</p>';
+  else {
+    html += '<fieldset class="wiki-transfer-page-list"><legend class="sr-only">Páginas que podem ser incluídas na importação</legend>';
+    pages.forEach(function(page) {
+      var pageId = adminWikiTransferPageId(page);
+      var action = adminWikiTransferAction(page.action || page.status);
+      var disabledReason = adminWikiTransferPageDisabledReason(page, sourceMap);
+      var disabled = disabledReason || state.commitPending || state.commitMessage ? ' disabled' : '';
+      var checked = selectedIds.indexOf(pageId) !== -1 ? ' checked' : '';
+      html += '<label class="wiki-transfer-page' + (disabledReason ? ' is-disabled' : '') + '" for="wiki-transfer-import-' + ha(pageId) + '">';
+      html += '<input type="checkbox" class="wiki-transfer-page-choice" id="wiki-transfer-import-' + ha(pageId) + '" value="' + ha(pageId) + '" onchange="setAdminWikiTransferImportPage(' + jsArg(pageId) + ',this.checked)"' + checked + disabled + '>';
+      html += '<span class="wiki-transfer-page-copy"><strong>' + h(page.title || page.slug || pageId || 'Página sem título') + '</strong>';
+      html += '<span>' + h(page.slug || 'Sem slug') + ' · ' + h(adminWikiTransferActionLabel(action)) + '</span>';
+      if (page.sourceRevisionId) html += '<code>Revisão de origem: ' + h(page.sourceRevisionId) + '</code>';
+      if (page.targetPageId) html += '<code>Destino: ' + h(page.targetPageId) + '</code>';
+      if (page.reason || disabledReason) html += '<span class="wiki-transfer-reason">' + h(page.reason || disabledReason) + '</span>';
+      html += '</span></label>';
+    });
+    html += '</fieldset>';
+    html += '<div class="wiki-transfer-selection-actions">';
+    html += '<button type="button" class="btn btn-small" onclick="setAdminWikiTransferImportSelection(true)"' + (state.commitPending || state.commitMessage || !adminWikiTransferSelectablePages(preview).length ? ' disabled' : '') + '>Selecionar páginas sem conflito</button>';
+    html += '<button type="button" class="btn btn-small" onclick="setAdminWikiTransferImportSelection(false)"' + (state.commitPending || state.commitMessage ? ' disabled' : '') + '>Limpar seleção</button>';
+    html += '<span id="wiki-transfer-import-selection-count" aria-live="polite">' + selectedIds.length + ' selecionada(s)</span></div>';
+  }
+  html += '</div>';
+
+  html += '<div class="wiki-transfer-preview-block"><h5>Fontes e proveniência</h5>';
+  if (!sources.length) html += '<p class="field-desc">Nenhuma fonte incluída nesta prévia.</p>';
+  else {
+    html += '<div class="wiki-transfer-table-wrap"><table class="wiki-transfer-table"><thead><tr><th>Arquivo / fonte</th><th>Hash do arquivo</th><th>Estado</th></tr></thead><tbody>';
+    sources.forEach(function(source) {
+      var action = adminWikiTransferAction(source.action || source.status);
+      var label = [source.relativePath, source.sourceSourceId].filter(Boolean).join(' · ') || 'Fonte sem identificador';
+      html += '<tr><td><strong>' + h(label) + '</strong>';
+      if (source.sourceSourceId) html += '<code>Origem: ' + h(source.sourceSourceId) + '</code>';
+      if (source.archiveSha256) html += '<code>Arquivo: ' + h(source.archiveSha256) + '</code>';
+      if (source.reason) html += '<span class="wiki-transfer-reason">' + h(source.reason) + '</span>';
+      html += '</td><td><code>' + h(source.sha256 || 'Não informado') + '</code></td>';
+      html += '<td><span class="wiki-transfer-status wiki-transfer-status-' + ha(action) + '">' + h(adminWikiTransferActionLabel(action)) + '</span></td></tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+  html += '</div>';
+
+  var conflicts = Array.isArray(preview.conflicts) ? preview.conflicts : [];
+  var validationErrors = Array.isArray(preview.validationErrors) ? preview.validationErrors : [];
+  if (conflicts.length || validationErrors.length) {
+    html += '<div class="wiki-transfer-preview-block wiki-transfer-attention"><h5>Conflitos e validações</h5><ul>';
+    conflicts.forEach(function(item) { html += '<li>' + h(adminWikiTransferIssueText(item)) + '</li>'; });
+    validationErrors.forEach(function(item) { html += '<li>' + h(adminWikiTransferIssueText(item)) + '</li>'; });
+    html += '</ul></div>';
+  }
+
+  if (state.commitError) html += '<p class="alert alert-error" role="alert">' + h(state.commitError) + '</p>';
+  if (state.commitMessage) html += '<p class="alert alert-info" role="status">' + h(state.commitMessage) + '</p>';
+  if (state.commitReport) html += '<details class="wiki-transfer-result"><summary>Resultado da importação</summary><pre>' + h(JSON.stringify(state.commitReport, null, 2)) + '</pre></details>';
+  html += '<div class="wiki-transfer-confirm">';
+  html += '<label><input type="checkbox" id="wiki-transfer-confirm" onchange="setAdminWikiTransferConfirmation(this.checked)"' + (state.importConfirmed ? ' checked' : '') + (state.commitPending || !!state.commitMessage ? ' disabled' : '') + '>';
+  html += '<span>Confirmo a importação das páginas selecionadas no destino. A publicação continua sendo uma ação editorial separada.</span></label>';
+  html += '<button type="button" class="btn btn-primary" id="wiki-transfer-commit-button" onclick="commitAdminWikiTransferImport()"' + (state.commitPending || !!state.commitMessage || !state.importConfirmed || !selectedIds.length || !state.importId || !state.importPlanHash || state.importVersion === null ? ' disabled' : '') + '>';
+  html += state.commitPending ? 'Importando…' : 'Confirmar importação';
+  html += '</button></div>';
+  html += '</div>';
+  return html;
+}
+
+function adminWikiTransferSourceMap(preview) {
+  var sourceMap = Object.create(null);
+  (Array.isArray(preview.sources) ? preview.sources : []).forEach(function(source) {
+    var id = String(source.sourceSourceId || source.id || '');
+    if (id) sourceMap[id] = source;
+  });
+  return sourceMap;
+}
+
+function adminWikiTransferPageId(page) {
+  return String(page && (page.sourcePageId || page.id) || '');
+}
+
+function adminWikiTransferAction(value) {
+  return String(value || 'invalid').toLowerCase();
+}
+
+function adminWikiTransferActionLabel(action) {
+  var labels = {
+    total: 'Total',
+    create: 'Será criada',
+    reuse: 'Será reutilizada',
+    already_imported: 'Já importada',
+    conflict: 'Conflito',
+    invalid: 'Inválida',
+    ready: 'Pronta',
+    staged: 'Em análise',
+    committed: 'Concluída',
+  };
+  return labels[action] || action || 'Sem estado';
+}
+
+function adminWikiTransferPageDisabledReason(page, sourceMap) {
+  var action = adminWikiTransferAction(page.action || page.status);
+  if (action === 'conflict') return page.reason || 'Este item tem um conflito e não pode ser sobrescrito.';
+  if (action === 'invalid') return page.reason || 'Este item não passou pela validação.';
+  if (action !== 'create' && action !== 'reuse') return page.reason || 'Este item não pode ser incluído nesta importação.';
+  var required = Array.isArray(page.requiredSourceIds) ? page.requiredSourceIds : [];
+  for (var index = 0; index < required.length; index++) {
+    var source = sourceMap[String(required[index])];
+    if (!source) return 'Uma fonte necessária não está disponível na prévia.';
+    var sourceAction = adminWikiTransferAction(source.action || source.status);
+    if (sourceAction === 'conflict') return source.reason || 'Uma fonte necessária tem conflito e não pode ser sobrescrita.';
+    if (sourceAction === 'invalid') return source.reason || 'Uma fonte necessária não passou pela validação.';
+  }
+  return '';
+}
+
+function adminWikiTransferSelectablePages(preview) {
+  var sourceMap = adminWikiTransferSourceMap(preview || {});
+  return (Array.isArray(preview && preview.pages) ? preview.pages : []).filter(function(page) {
+    return !adminWikiTransferPageDisabledReason(page, sourceMap);
+  });
+}
+
+function adminWikiTransferCounts(counts, items) {
+  if (counts && typeof counts === 'object' && !Array.isArray(counts)) {
+    var keys = Object.keys(counts);
+    if (keys.length) return keys.map(function(key) { return adminWikiTransferActionLabel(key) + ': ' + Number(counts[key] || 0); }).join(' · ');
+  }
+  var total = Array.isArray(items) ? items.length : 0;
+  return total + (total === 1 ? ' item' : ' itens');
+}
+
+function adminWikiTransferIssueText(item) {
+  if (typeof item === 'string') return item;
+  if (!item || typeof item !== 'object') return String(item || 'Item com conflito.');
+  var parts = [item.title || item.slug || item.relativePath || item.sourcePageId || item.sourceSourceId || item.id, item.reason || item.message || item.code];
+  return parts.filter(Boolean).join(' · ') || JSON.stringify(item);
+}
+
+function loadAdminWikiTransferPages(force) {
+  var state = adminWikiTransferState;
+  if (!isAdmin() || state.pagesLoading || (state.pagesLoaded && !force)) return;
+  state.pagesLoading = true;
+  state.pagesError = null;
+  var offset = 0;
+  var pages = [];
+  function loadPage() {
+    return apiRequest('GET', '/api/staff/wiki/pages?limit=100&offset=' + offset + '&includeArchived=true').then(function(response) {
+      if (!response || !Array.isArray(response.data)) throw new Error('A resposta das páginas da wiki é inválida.');
+      pages = pages.concat(response.data);
+      var page = response.page || {};
+      if (!page.hasMore) return pages;
+      offset = Number(page.offset || offset) + Number(page.limit || 100);
+      return loadPage();
+    });
+  }
+  loadPage().then(function(items) {
+    if (!isAdmin()) return;
+    state.pages = items;
+    state.pagesLoaded = true;
+    var pageIds = new Set(items.map(function(page) { return String(page.id); }));
+    state.exportPageIds = state.exportPageIds.filter(function(id) { return pageIds.has(id); });
+  }).catch(function(error) {
+    if (isAdmin()) state.pagesError = error && error.message ? error.message : 'Não foi possível carregar as páginas da wiki.';
+  }).finally(function() {
+    state.pagesLoading = false;
+    if (currentPage === 'admin' && isAdmin()) render();
+  });
+}
+
+function setAdminWikiTransferExportPage(pageId, selected) {
+  if (!isAdmin()) return;
+  var id = String(pageId || '');
+  if (!adminWikiTransferState.pages.some(function(page) { return String(page.id) === id; })) return;
+  var ids = adminWikiTransferState.exportPageIds.filter(function(value) { return value !== id; });
+  if (selected) ids.push(id);
+  adminWikiTransferState.exportPageIds = ids;
+  syncAdminWikiTransferSelectionUi();
+}
+
+function setAdminWikiTransferExportSelection(selected) {
+  if (!isAdmin()) return;
+  adminWikiTransferState.exportPageIds = selected
+    ? adminWikiTransferState.pages.map(function(page) { return String(page.id); }).filter(Boolean)
+    : [];
+  syncAdminWikiTransferSelectionUi();
+}
+
+function setAdminWikiTransferImportPage(pageId, selected) {
+  if (!isAdmin()) return;
+  var state = adminWikiTransferState;
+  var id = String(pageId || '');
+  if (!adminWikiTransferSelectablePages(state.importPreview).some(function(page) { return adminWikiTransferPageId(page) === id; })) return;
+  var ids = state.importPageIds.filter(function(value) { return value !== id; });
+  if (selected) ids.push(id);
+  state.importPageIds = ids;
+  syncAdminWikiTransferSelectionUi();
+}
+
+function setAdminWikiTransferImportSelection(selected) {
+  if (!isAdmin()) return;
+  var state = adminWikiTransferState;
+  state.importPageIds = selected
+    ? adminWikiTransferSelectablePages(state.importPreview).map(adminWikiTransferPageId).filter(Boolean)
+    : [];
+  syncAdminWikiTransferSelectionUi();
+}
+
+function setAdminWikiTransferConfirmation(confirmed) {
+  if (!isAdmin()) return;
+  adminWikiTransferState.importConfirmed = !!confirmed;
+  syncAdminWikiTransferSelectionUi();
+}
+
+function syncAdminWikiTransferSelectionUi() {
+  var state = adminWikiTransferState;
+  var exportButton = document.getElementById('wiki-transfer-export-button');
+  if (exportButton) exportButton.disabled = !!(state.exportPending || !state.exportPageIds.length || !state.pagesLoaded);
+  var exportCount = document.getElementById('wiki-transfer-export-selection-count');
+  if (exportCount) exportCount.textContent = state.exportPageIds.length + ' selecionada(s)';
+  document.querySelectorAll('.wiki-transfer-export-choice').forEach(function(input) {
+    input.checked = state.exportPageIds.indexOf(input.value) !== -1;
+  });
+  var importCount = document.getElementById('wiki-transfer-import-selection-count');
+  if (importCount) importCount.textContent = state.importPageIds.length + ' selecionada(s)';
+  document.querySelectorAll('.wiki-transfer-page-choice').forEach(function(input) {
+    input.checked = state.importPageIds.indexOf(input.value) !== -1;
+  });
+  var commitButton = document.getElementById('wiki-transfer-commit-button');
+  if (commitButton) commitButton.disabled = !!(state.commitPending || state.commitMessage || !state.importConfirmed
+    || !state.importPageIds.length || !state.importId || !state.importPlanHash || state.importVersion === null);
+}
+
+function exportAdminWikiBundle() {
+  var state = adminWikiTransferState;
+  if (!isAdmin() || state.exportPending || !state.exportPageIds.length) return Promise.resolve();
+  state.exportPending = true;
+  state.exportError = null;
+  state.exportMessage = null;
+  render();
+  return apiRequest('POST', '/api/admin/wiki-transfers/export', { pageIds: state.exportPageIds.slice() }).then(function(response) {
+    if (!isAdmin()) return;
+    var bundle = response && response.bundle ? response.bundle : (response && response.data ? response.data : response);
+    if (!bundle || typeof bundle !== 'object' || Array.isArray(bundle)) throw new Error('O servidor retornou um pacote inválido.');
+    var blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json;charset=utf-8' });
+    var url = window.URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = 'aetherverse-wiki-' + new Date().toISOString().slice(0, 10) + '.json';
+    link.hidden = true;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(function() { window.URL.revokeObjectURL(url); }, 1000);
+    state.exportMessage = 'Pacote JSON baixado com as revisões atuais das páginas selecionadas.';
+  }).catch(function(error) {
+    if (isAdmin()) state.exportError = error && error.message ? error.message : 'Não foi possível exportar as páginas selecionadas.';
+  }).finally(function() {
+    state.exportPending = false;
+    if (currentPage === 'admin' && isAdmin()) render();
+  });
+}
+
+function readAdminWikiTransferFile(file) {
+  var state = adminWikiTransferState;
+  if (!isAdmin()) return Promise.resolve();
+  state.fileName = file && file.name ? file.name : '';
+  state.bundle = null;
+  state.importError = null;
+  state.importId = null;
+  state.importVersion = null;
+  state.importPlanHash = null;
+  state.importPreview = null;
+  state.importPageIds = [];
+  state.importConfirmed = false;
+  state.commitError = null;
+  state.commitMessage = null;
+  state.commitReport = null;
+  if (!file) { render(); return Promise.resolve(); }
+  var readFile = typeof file.text === 'function'
+    ? file.text()
+    : new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function() { resolve(String(reader.result || '')); };
+      reader.onerror = function() { reject(new Error('Não foi possível ler o arquivo selecionado.')); };
+      reader.readAsText(file);
+    });
+  return Promise.resolve(readFile).then(function(text) {
+    var parsed = JSON.parse(text);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('O arquivo deve conter um objeto JSON de pacote.');
+    state.bundle = parsed;
+  }).catch(function(error) {
+    state.fileName = '';
+    state.importError = error && error.message ? error.message : 'Não foi possível ler o pacote JSON.';
+  }).finally(function() {
+    if (currentPage === 'admin' && isAdmin()) render();
+  });
+}
+
+function applyAdminWikiTransferPreview(response, preserveSelection) {
+  var state = adminWikiTransferState;
+  var result = response && response.data && typeof response.data === 'object' ? response.data : (response || {});
+  var preview = result.preview && typeof result.preview === 'object' ? result.preview
+    : (result.report && typeof result.report === 'object' ? result.report : result);
+  var id = result.id || result.importId || state.importId;
+  var version = Number.isInteger(result.version) ? result.version
+    : (Number.isInteger(preview.planVersion) ? preview.planVersion : null);
+  var planHash = result.planHash || preview.planHash || null;
+  if (!id || !preview || typeof preview !== 'object') throw new Error('A prévia retornada pelo servidor está incompleta.');
+  var previous = preserveSelection ? new Set(state.importPageIds) : null;
+  state.importId = String(id);
+  state.importVersion = version;
+  state.importPlanHash = typeof planHash === 'string' ? planHash : null;
+  state.importPreview = preview;
+  var selectable = adminWikiTransferSelectablePages(preview).map(adminWikiTransferPageId).filter(Boolean);
+  state.importPageIds = previous
+    ? selectable.filter(function(pageId) { return previous.has(pageId); })
+    : selectable;
+  state.importConfirmed = false;
+  state.commitError = null;
+  state.commitMessage = null;
+  state.commitReport = null;
+}
+
+function startAdminWikiTransferImport() {
+  var state = adminWikiTransferState;
+  if (!isAdmin() || state.importPending || !state.bundle) return Promise.resolve();
+  state.importPending = true;
+  state.importError = null;
+  state.commitError = null;
+  render();
+  return apiRequest('POST', '/api/admin/wiki-transfers/imports', { bundle: state.bundle }).then(function(response) {
+    if (!isAdmin()) return;
+    applyAdminWikiTransferPreview(response, false);
+  }).catch(function(error) {
+    if (isAdmin()) state.importError = error && error.message ? error.message : 'Não foi possível analisar o pacote.';
+  }).finally(function() {
+    state.importPending = false;
+    if (currentPage === 'admin' && isAdmin()) render();
+  });
+}
+
+function refreshAdminWikiTransferPreview() {
+  var state = adminWikiTransferState;
+  if (!isAdmin() || !state.importId || state.refreshPending || state.commitPending) return Promise.resolve();
+  state.refreshPending = true;
+  state.commitError = null;
+  state.commitMessage = null;
+  state.commitReport = null;
+  render();
+  return apiRequest('POST', '/api/admin/wiki-transfers/imports/' + encodeURIComponent(state.importId) + '/refresh', {}).then(function(response) {
+    if (!isAdmin()) return;
+    applyAdminWikiTransferPreview(response, true);
+  }).catch(function(error) {
+    if (isAdmin()) state.commitError = error && error.message ? error.message : 'Não foi possível atualizar a prévia.';
+  }).finally(function() {
+    state.refreshPending = false;
+    if (currentPage === 'admin' && isAdmin()) render();
+  });
+}
+
+function clearAdminWikiTransferImport() {
+  if (!isAdmin() || adminWikiTransferState.importPending || adminWikiTransferState.commitPending) return;
+  var state = adminWikiTransferState;
+  state.fileName = '';
+  state.bundle = null;
+  state.importError = null;
+  state.importId = null;
+  state.importVersion = null;
+  state.importPlanHash = null;
+  state.importPreview = null;
+  state.importPageIds = [];
+  state.importConfirmed = false;
+  state.commitError = null;
+  state.commitMessage = null;
+  state.commitReport = null;
+  render();
+}
+
+function adminWikiTransferSelectedSourceIds(preview, pageIds) {
+  var pages = Array.isArray(preview && preview.pages) ? preview.pages : [];
+  var selected = new Set(pageIds);
+  var sourceIds = new Set();
+  pages.forEach(function(page) {
+    if (!selected.has(adminWikiTransferPageId(page))) return;
+    (Array.isArray(page.requiredSourceIds) ? page.requiredSourceIds : []).forEach(function(id) {
+      if (id) sourceIds.add(String(id));
+    });
+  });
+  return Array.from(sourceIds).sort();
+}
+
+function commitAdminWikiTransferImport() {
+  var state = adminWikiTransferState;
+  if (!isAdmin() || state.commitPending || state.commitMessage || !state.importConfirmed) return Promise.resolve();
+  var selectable = new Set(adminWikiTransferSelectablePages(state.importPreview).map(adminWikiTransferPageId));
+  var pageIds = state.importPageIds.filter(function(id) { return selectable.has(id); }).sort();
+  if (!pageIds.length || !state.importId || !state.importPlanHash || !Number.isInteger(state.importVersion)) return Promise.resolve();
+  state.commitPending = true;
+  state.commitError = null;
+  render();
+  var payload = {
+    expectedVersion: state.importVersion,
+    planHash: state.importPlanHash,
+    pageIds: pageIds,
+    sourceIds: adminWikiTransferSelectedSourceIds(state.importPreview, pageIds),
+  };
+  return apiRequest('POST', '/api/admin/wiki-transfers/imports/' + encodeURIComponent(state.importId) + '/commit', payload).then(function(response) {
+    if (!isAdmin()) return;
+    var result = response && response.data && typeof response.data === 'object' ? response.data : response;
+    state.commitReport = result && (result.report || result) || null;
+    state.commitMessage = 'Importação concluída. Revise as páginas no destino; a publicação é uma ação editorial separada.';
+  }).catch(function(error) {
+    if (isAdmin()) state.commitError = error && error.message ? error.message : 'Não foi possível confirmar a importação.';
+  }).finally(function() {
+    state.commitPending = false;
+    if (currentPage === 'admin' && isAdmin()) render();
+  });
 }
 
 function showModal(title, bodyHtml) {
@@ -5087,6 +5608,7 @@ function formatJoinDate(iso) {
 
 function applyServerSession(serverUser) {
   var previousId = DB.session && (DB.session.serverId || DB.session.id);
+  var previousRole = DB.session && DB.session.role;
   if (!serverUser) {
     if (previousId) {
       clearForumDraftEditors();
@@ -5108,6 +5630,8 @@ function applyServerSession(serverUser) {
   if (previousId && String(previousId) !== safeUser.id) {
     clearForumDraftEditors();
     clearWikiTransientState();
+  } else if (previousRole === 'admin' && safeUser.role !== 'admin') {
+    adminWikiTransferState = createAdminWikiTransferState();
   }
   DB.session = Object.assign({}, safeUser, {
     serverId: safeUser.id,

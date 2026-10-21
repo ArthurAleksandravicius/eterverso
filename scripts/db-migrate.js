@@ -216,6 +216,37 @@ const IMPORT_CONSTRAINTS = [
   'legacy_imports.legacy_imports_pkey:p',
   'legacy_imports.legacy_imports_raw_hash_check:c',
 ].sort();
+const TRANSFER_COLUMNS = {
+  ...IMPORT_COLUMNS,
+  wiki_transfer_instances: ['singleton', 'instance_id', 'created_at'],
+  wiki_transfer_jobs: ['id', 'created_by', 'bundle_sha256', 'bundle', 'preview', 'preview_version', 'preview_sha256', 'state', 'commit_result', 'created_at', 'updated_at', 'committed_at'],
+  wiki_transfer_page_mappings: ['origin_id', 'source_page_id', 'source_revision_id', 'source_snapshot_sha256', 'target_page_id', 'target_revision_id', 'target_snapshot_sha256', 'created_at'],
+  wiki_transfer_source_mappings: ['origin_id', 'source_source_id', 'source_record_sha256', 'target_source_id', 'created_at'],
+};
+const TRANSFER_CONSTRAINTS = [
+  ...IMPORT_CONSTRAINTS,
+  'wiki_transfer_instances.wiki_transfer_instances_instance_id_key:u',
+  'wiki_transfer_instances.wiki_transfer_instances_pkey:p',
+  'wiki_transfer_instances.wiki_transfer_instances_singleton_check:c',
+  'wiki_transfer_jobs.wiki_transfer_jobs_bundle_hash_check:c',
+  'wiki_transfer_jobs.wiki_transfer_jobs_bundle_sha256_key:u',
+  'wiki_transfer_jobs.wiki_transfer_jobs_bundle_shape_check:c',
+  'wiki_transfer_jobs.wiki_transfer_jobs_created_by_fkey:f',
+  'wiki_transfer_jobs.wiki_transfer_jobs_preview_hash_check:c',
+  'wiki_transfer_jobs.wiki_transfer_jobs_preview_shape_check:c',
+  'wiki_transfer_jobs.wiki_transfer_jobs_preview_version_check:c',
+  'wiki_transfer_jobs.wiki_transfer_jobs_pkey:p',
+  'wiki_transfer_jobs.wiki_transfer_jobs_state_check:c',
+  'wiki_transfer_page_mappings.wiki_transfer_page_mappings_identity_key:p',
+  'wiki_transfer_page_mappings.wiki_transfer_page_mappings_source_hash_check:c',
+  'wiki_transfer_page_mappings.wiki_transfer_page_mappings_target_hash_check:c',
+  'wiki_transfer_page_mappings.wiki_transfer_page_mappings_target_page_fkey:f',
+  'wiki_transfer_page_mappings.wiki_transfer_page_mappings_target_page_key:u',
+  'wiki_transfer_page_mappings.wiki_transfer_page_mappings_target_revision_fkey:f',
+  'wiki_transfer_source_mappings.wiki_transfer_source_mappings_hash_check:c',
+  'wiki_transfer_source_mappings.wiki_transfer_source_mappings_identity_key:p',
+  'wiki_transfer_source_mappings.wiki_transfer_source_mappings_target_source_fkey:f',
+].sort();
 
 function readDotEnv(file) {
   if (!fs.existsSync(file)) return {};
@@ -341,6 +372,15 @@ function classifySchema(report, history) {
       && hasCaseInsensitiveUsernameIndex && forumTimestampsUseTimezone && hasSceneIndexes
       && hasWikiNameIndex && hasWikiRevisionImmutability) {
     return { state: 'verified-0013-legacy-import', supported: true };
+  }
+
+  const exactTransferColumns = sameList(appTables, Object.keys(TRANSFER_COLUMNS).sort())
+    && Object.keys(TRANSFER_COLUMNS).every((table) => sameList(report.columns[table] || [], TRANSFER_COLUMNS[table]));
+  const exactTransferConstraints = sameList(report.constraints, TRANSFER_CONSTRAINTS);
+  if (knownLedger && ledger.length === 15 && exactTransferColumns && exactTransferConstraints
+      && hasCaseInsensitiveUsernameIndex && forumTimestampsUseTimezone && hasSceneIndexes
+      && hasWikiNameIndex && hasWikiRevisionImmutability) {
+    return { state: 'verified-0014-wiki-portable-transfers', supported: true };
   }
 
   return {
@@ -517,7 +557,7 @@ async function preflight(targetName) {
 
 async function migrate(targetName) {
   const { report, target } = await preflight(targetName);
-  if (!['empty', 'verified-0006-baseline', 'verified-0007-account-security', 'verified-0008-forum', 'verified-0009-forum-integrity', 'verified-0010-forum-timestamps', 'verified-0011-scene-turns', 'verified-0012-wiki-core', 'verified-0013-legacy-import'].includes(report.classification.state)) {
+  if (!['empty', 'verified-0006-baseline', 'verified-0007-account-security', 'verified-0008-forum', 'verified-0009-forum-integrity', 'verified-0010-forum-timestamps', 'verified-0011-scene-turns', 'verified-0012-wiki-core', 'verified-0013-legacy-import', 'verified-0014-wiki-portable-transfers'].includes(report.classification.state)) {
     throw new Error('Automatic migration is supported only from an empty database or an exact reviewed schema state.');
   }
   if (report.pendingMigrations.length === 0) {
@@ -644,6 +684,8 @@ module.exports = {
   WIKI_CONSTRAINTS,
   IMPORT_COLUMNS,
   IMPORT_CONSTRAINTS,
+  TRANSFER_COLUMNS,
+  TRANSFER_CONSTRAINTS,
   classifySchema,
   assertPrivateBackupFile,
   archiveListBelongsToDevelopment,

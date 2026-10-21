@@ -18,8 +18,8 @@ test('ENV-01 integration connection reaches only the isolated test database', as
   const identity = await sql`SELECT current_database() AS database`;
   assert.equal(identity[0].database, 'eterverso_test');
   const ledger = await sql`SELECT id, hash FROM drizzle.__drizzle_migrations ORDER BY id`;
-  assert.equal(ledger.length, 14);
-  assert.equal(ledger[13].id, 14);
+  assert.equal(ledger.length, 15);
+  assert.equal(ledger[14].id, 15);
   const tableNames = (await sql`
     SELECT table_name FROM information_schema.tables
     WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name`

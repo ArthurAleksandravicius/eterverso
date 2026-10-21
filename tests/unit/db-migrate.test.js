@@ -19,6 +19,8 @@ const {
   WIKI_CONSTRAINTS,
   IMPORT_COLUMNS,
   IMPORT_CONSTRAINTS,
+  TRANSFER_COLUMNS,
+  TRANSFER_CONSTRAINTS,
   classifySchema,
   assertPrivateBackupFile,
   archiveListBelongsToDevelopment,
@@ -26,7 +28,7 @@ const {
 } = require('../../scripts/db-migrate');
 
 function fixture() {
-  const history = Array.from({ length: 14 }, (_entry, index) => ({ id: index + 1, hash: `hash-${index + 1}` }));
+  const history = Array.from({ length: 15 }, (_entry, index) => ({ id: index + 1, hash: `hash-${index + 1}` }));
   return {
     history,
     report: {
@@ -111,7 +113,7 @@ test('MIG-03 recognizes only empty and exact supported migration/schema states',
   imported.publicTables = Object.keys(IMPORT_COLUMNS).sort();
   imported.columns = Object.fromEntries(Object.entries(IMPORT_COLUMNS).map(([name, columns]) => [name, [...columns]]));
   imported.constraints = [...IMPORT_CONSTRAINTS];
-  imported.ledger = history.map((entry) => ({ ...entry }));
+  imported.ledger = history.slice(0, 14).map((entry) => ({ ...entry }));
   imported.triggers = [...wiki.triggers, {
     table: 'wiki_revisions', name: 'wiki_revisions_immutable', functionName: 'prevent_wiki_revision_mutation',
     definition: 'CREATE TRIGGER wiki_revisions_immutable BEFORE UPDATE OR DELETE ON public.wiki_revisions FOR EACH ROW EXECUTE FUNCTION prevent_wiki_revision_mutation()',
@@ -119,6 +121,15 @@ test('MIG-03 recognizes only empty and exact supported migration/schema states',
   assert.deepEqual(classifySchema(imported, history), { state: 'verified-0013-legacy-import', supported: true });
   imported.constraints.pop();
   assert.equal(classifySchema(imported, history).supported, false, 'legacy import schema requires its full constraint set');
+
+  const transfers = structuredClone(imported);
+  transfers.publicTables = Object.keys(TRANSFER_COLUMNS).sort();
+  transfers.columns = Object.fromEntries(Object.entries(TRANSFER_COLUMNS).map(([name, columns]) => [name, [...columns]]));
+  transfers.constraints = [...TRANSFER_CONSTRAINTS];
+  transfers.ledger = history.map((entry) => ({ ...entry }));
+  assert.deepEqual(classifySchema(transfers, history), { state: 'verified-0014-wiki-portable-transfers', supported: true });
+  transfers.constraints.pop();
+  assert.equal(classifySchema(transfers, history).supported, false, 'transfer schema requires its full constraint set');
 
   const inconsistentLedger = structuredClone(report);
   inconsistentLedger.ledger = history.slice(0, 8).map((entry) => ({ ...entry }));

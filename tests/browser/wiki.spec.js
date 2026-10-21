@@ -12,7 +12,7 @@ const postgres = require('postgres');
 const { createApp } = require('../../server/app');
 
 const ROOT = path.resolve(__dirname, '../..');
-const REQUIRED_MIGRATION = '0013_legacy_import_pipeline';
+const REQUIRED_MIGRATION = '0014_wiki_portable_transfers';
 const PASSWORD = 'Synthetic-wiki-browser-password-42';
 let sql;
 let server;
@@ -39,7 +39,7 @@ test.beforeAll(async () => {
   const current = await sql`SELECT current_database() AS database, current_user AS username`;
   assert.equal(current[0].database, 'eterverso_test');
   assert.equal(current[0].username, 'eterverso_test');
-  await assertSchema0013();
+  await assertSchema0014();
 
   server = http.createServer();
   server.listen(0, '127.0.0.1');
@@ -226,10 +226,10 @@ test('UI-03 wiki reader, proposer, staff editor, and admin controls fit a mobile
   }
 });
 
-async function assertSchema0013() {
+async function assertSchema0014() {
   const journal = JSON.parse(fs.readFileSync(path.join(ROOT, 'drizzle/meta/_journal.json'), 'utf8')).entries;
   const required = journal.findIndex((entry) => entry.tag === REQUIRED_MIGRATION);
-  assert.ok(required >= 0, 'The reviewed legacy import migration must be registered.');
+  assert.ok(required >= 0, 'The reviewed portable wiki transfer migration must be registered.');
   const ledger = await sql`SELECT id, hash FROM drizzle.__drizzle_migrations ORDER BY id`;
   assert.equal(ledger.length, required + 1, 'Run this suite only against the reviewed isolated test schema. Do not migrate inside tests.');
   for (let index = 0; index <= required; index += 1) {

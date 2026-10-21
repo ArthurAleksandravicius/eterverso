@@ -7,7 +7,7 @@ const postgres = require('postgres');
 const { createApp } = require('./server/app');
 
 const ROOT = __dirname;
-const REQUIRED_MIGRATION = '0013_legacy_import_pipeline';
+const REQUIRED_MIGRATION = '0014_wiki_portable_transfers';
 const REQUIRED_FORUM_TIMESTAMP_COLUMNS = [
   'categories.created_at', 'categories.updated_at',
   'posts.created_at', 'posts.updated_at',
@@ -37,6 +37,10 @@ const REQUIRED_COLUMNS = {
   wiki_revision_citations: ['revision_id', 'section_id', 'source_id', 'locator'],
   wiki_revision_categories: ['revision_id', 'category', 'category_key'],
   wiki_revision_links: ['revision_id', 'target_name_key', 'target_anchor'],
+  wiki_transfer_instances: ['singleton', 'instance_id', 'created_at'],
+  wiki_transfer_jobs: ['id', 'created_by', 'bundle_sha256', 'bundle', 'preview', 'preview_version', 'preview_sha256', 'state', 'commit_result', 'created_at', 'updated_at', 'committed_at'],
+  wiki_transfer_page_mappings: ['origin_id', 'source_page_id', 'source_revision_id', 'source_snapshot_sha256', 'target_page_id', 'target_revision_id', 'target_snapshot_sha256', 'created_at'],
+  wiki_transfer_source_mappings: ['origin_id', 'source_source_id', 'source_record_sha256', 'target_source_id', 'created_at'],
   legacy_import_batches: ['job_id', 'batch_number', 'batch_hash', 'payload', 'created_at'],
   legacy_import_jobs: ['id', 'created_by', 'source_id', 'export_id', 'raw_snapshot_sha256', 'legacy_origin', 'batch_count', 'state', 'version', 'content_digest', 'plan_hash', 'plan', 'preview_report', 'import_id', 'created_at', 'updated_at', 'committed_at'],
   legacy_import_provenance: ['id', 'import_id', 'source_id', 'export_id', 'raw_snapshot_sha256', 'origin_label', 'recorded_by', 'created_at'],

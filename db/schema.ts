@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, index, foreignKey, integer, boolean, timestamp, unique, uniqueIndex, check, date, jsonb, uuid, type AnyPgColumn } from "drizzle-orm/pg-core"
+import { pgTable, serial, varchar, text, index, foreignKey, integer, boolean, timestamp, unique, uniqueIndex, primaryKey, check, date, jsonb, uuid, type AnyPgColumn } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 // Estrutura das tabelas na database
@@ -443,6 +443,70 @@ export const wikiRevisionCitations = pgTable("wiki_revision_citations", {
 	unique("wiki_revision_citations_identity_key").on(table.revisionId, table.sectionId, table.sourceId, table.locator),
 	foreignKey({ columns: [table.revisionId], foreignColumns: [wikiRevisions.id], name: "wiki_revision_citations_revision_id_fkey" }).onDelete("restrict"),
 	foreignKey({ columns: [table.sourceId], foreignColumns: [wikiSources.id], name: "wiki_revision_citations_source_id_fkey" }).onDelete("restrict"),
+]);
+
+export const wikiTransferInstances = pgTable("wiki_transfer_instances", {
+	singleton: boolean().primaryKey().notNull().default(true),
+	instanceId: uuid("instance_id").notNull().defaultRandom(),
+	createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+	unique("wiki_transfer_instances_instance_id_key").on(table.instanceId),
+	check("wiki_transfer_instances_singleton_check", sql`singleton`),
+]);
+
+export const wikiTransferJobs = pgTable("wiki_transfer_jobs", {
+	id: uuid().primaryKey().notNull().defaultRandom(),
+	createdBy: uuid("created_by").notNull(),
+	bundleSha256: varchar("bundle_sha256", { length: 64 }).notNull(),
+	bundle: jsonb().notNull(),
+	preview: jsonb().notNull(),
+	previewVersion: integer("preview_version").default(1).notNull(),
+	previewSha256: varchar("preview_sha256", { length: 64 }).notNull(),
+	state: varchar({ length: 16 }).default("staged").notNull(),
+	commitResult: jsonb("commit_result"),
+	createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+	committedAt: timestamp("committed_at", { mode: 'string', withTimezone: true }),
+}, (table) => [
+	unique("wiki_transfer_jobs_bundle_sha256_key").on(table.bundleSha256),
+	foreignKey({ columns: [table.createdBy], foreignColumns: [users.id], name: "wiki_transfer_jobs_created_by_fkey" }).onDelete("restrict"),
+	check("wiki_transfer_jobs_preview_version_check", sql`preview_version > 0`),
+	check("wiki_transfer_jobs_state_check", sql`state IN ('staged', 'committed')`),
+	check("wiki_transfer_jobs_bundle_hash_check", sql`bundle_sha256 ~ '^[0-9a-f]{64}$'`),
+	check("wiki_transfer_jobs_preview_hash_check", sql`preview_sha256 ~ '^[0-9a-f]{64}$'`),
+	check("wiki_transfer_jobs_bundle_shape_check", sql`jsonb_typeof(bundle) = 'object' AND bundle->>'format' = 'AetherverseWikiBundleV1'`),
+	check("wiki_transfer_jobs_preview_shape_check", sql`jsonb_typeof(preview) = 'object'`),
+]);
+
+export const wikiTransferPageMappings = pgTable("wiki_transfer_page_mappings", {
+	originId: uuid("origin_id").notNull(),
+	sourcePageId: uuid("source_page_id").notNull(),
+	sourceRevisionId: uuid("source_revision_id").notNull(),
+	// Digest of sourceRevisionId, the staff snapshot, and canonical citation tuples.
+	sourcePageIdentitySha256: varchar("source_snapshot_sha256", { length: 64 }).notNull(),
+	targetPageId: uuid("target_page_id").notNull(),
+	targetRevisionId: uuid("target_revision_id").notNull(),
+	targetSnapshotSha256: varchar("target_snapshot_sha256", { length: 64 }).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+	primaryKey({ columns: [table.originId, table.sourcePageId], name: "wiki_transfer_page_mappings_identity_key" }),
+	unique("wiki_transfer_page_mappings_target_page_key").on(table.targetPageId),
+	foreignKey({ columns: [table.targetPageId], foreignColumns: [wikiPages.id], name: "wiki_transfer_page_mappings_target_page_fkey" }).onDelete("restrict"),
+	foreignKey({ columns: [table.targetPageId, table.targetRevisionId], foreignColumns: [wikiRevisions.pageId, wikiRevisions.id], name: "wiki_transfer_page_mappings_target_revision_fkey" }).onDelete("restrict"),
+	check("wiki_transfer_page_mappings_source_hash_check", sql`source_snapshot_sha256 ~ '^[0-9a-f]{64}$'`),
+	check("wiki_transfer_page_mappings_target_hash_check", sql`target_snapshot_sha256 ~ '^[0-9a-f]{64}$'`),
+]);
+
+export const wikiTransferSourceMappings = pgTable("wiki_transfer_source_mappings", {
+	originId: uuid("origin_id").notNull(),
+	sourceSourceId: uuid("source_source_id").notNull(),
+	sourceRecordSha256: varchar("source_record_sha256", { length: 64 }).notNull(),
+	targetSourceId: uuid("target_source_id").notNull(),
+	createdAt: timestamp("created_at", { mode: 'string', withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+	primaryKey({ columns: [table.originId, table.sourceSourceId], name: "wiki_transfer_source_mappings_identity_key" }),
+	foreignKey({ columns: [table.targetSourceId], foreignColumns: [wikiSources.id], name: "wiki_transfer_source_mappings_target_source_fkey" }).onDelete("restrict"),
+	check("wiki_transfer_source_mappings_hash_check", sql`source_record_sha256 ~ '^[0-9a-f]{64}$'`),
 ]);
 
 export const wikiRevisionCategories = pgTable("wiki_revision_categories", {

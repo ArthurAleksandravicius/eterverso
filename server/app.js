@@ -14,6 +14,7 @@ const { createWikiRouter } = require('./wiki');
 const { createProposalRouter } = require('./proposals');
 const { createSourceRouter } = require('./sources');
 const { createLegacyImportRouter } = require('./legacy-import');
+const { createWikiTransfersRouter } = require('./wiki-transfers');
 
 function createApp(options) {
   if (!options || typeof options.sql !== 'function' || typeof options.sql.json !== 'function') {
@@ -1044,6 +1045,7 @@ function createApp(options) {
 
   app.use('/api/forum', createForumRouter({ sql, auth }));
   app.use('/api/admin', createLegacyImportRouter({ sql, auth }));
+  app.use('/api/admin/wiki-transfers', createWikiTransfersRouter({ sql, auth }));
   app.use('/api/admin', createAdminRouter({ sql, auth }));
   app.use('/api', createWikiRouter({ sql, auth }));
   app.use('/api', createProposalRouter({ sql, auth }));
