@@ -199,6 +199,27 @@ creates a new public revision carrying its citations and publishes it atomically
 it does not rewrite the historical private snapshot. New staff-only publication
 requests are refused. Public listings continue to use only public publications.
 
+### Timeline, notifications and likes
+
+The **Linha do Tempo** page is a separate, staff-managed public timeline. It is
+not reference-wiki content: its events do not create page revisions, citations,
+proposals or publication pointers. Migration `0017_timeline_events` creates the
+empty timeline table. Committed seed material in `server/timeline-seed.json` is
+not applied automatically at startup; an operator may load it deliberately, and
+doing so is a content decision rather than an automatic publication.
+
+Logged-in users can receive notifications for scene turns and likes, and can
+like characters, RPG scenes and scene turns. Scene likes use the `wiki_posts`
+records; they do not apply to reference `wiki_pages`. Notification text is
+limited to the acting user's public identity and the scene/character title, and
+is readable only by its recipient.
+
+Timeline edits and deletes are staff-only and recorded in `audit_events`. The
+current timeline editor uses an optional `expectedUpdatedAt` concurrency check
+and deletes remain permanent but auditable. A versioned, restorable timeline
+archive is not implemented; do not describe timeline editing as having the same
+history guarantees as reference-wiki revisions.
+
 ### Portable wiki transfers
 
 Administrators can export selected wiki pages from the Admin area as an
@@ -270,6 +291,9 @@ the local rendered articles. The eventual PR/changelog process is recorded in
 | `server.js` | Loads configuration, checks database readiness, and starts Express |
 | `server/app.js` | Express app factory and shared auth, profile, character, and scene routes |
 | `server/forum.js`, `server/admin.js` | Shared forum and administrator routes |
+| `server/interactions.js` | Notification and character/scene/turn like routes |
+| `server/timeline.js` | Staff-managed public timeline and its audit/concurrency checks |
+| `src/server.ts` | Optional TypeScript entry that reuses the canonical readiness/startup path; `npm start` remains the default |
 | `server/wiki.js`, `server/proposals.js`, `server/sources.js` | Reference wiki, member proposals, and restricted source routes |
 | `server/wiki-transfers.js` | Admin-only, versioned wiki bundle export, preview, refresh, and commit |
 | `server/wiki-article-files.js` | Staff article-file preview/commit, latest-revision export and AI guide/template |
@@ -286,9 +310,16 @@ collaborative RPG scenes and turns.
 ## Current status and limitations
 
 Forum categories, topics, replies, moderation, and reference wiki pages are
-server-backed. Accounts, profiles, characters, RPG scenes, and scene turns
-also use PostgreSQL. Browser storage remains for local drafts, preferences,
-and legacy recovery; it is not the shared source of forum or wiki content.
+server-backed. Accounts, profiles, characters, RPG scenes, scene turns,
+notifications, likes, and timeline events also use PostgreSQL. Browser storage
+remains for local drafts, preferences, and legacy recovery; it is not the shared
+source of forum or wiki content.
+
+The timeline, notifications and likes were integrated from upstream and adapted
+to this project's migration/readiness and authorization rules. The reference
+wiki keeps its separate revision, proposal, source and citation model; timeline
+events are not reference articles. See the timeline section above for its
+current history limitations.
 
 Current test results, completed acceptance gates, and remaining limitations
 are recorded in [`docs/planning/EXECUTION_STATE.md`](docs/planning/EXECUTION_STATE.md).

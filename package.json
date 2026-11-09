@@ -23,7 +23,9 @@
     "wiki:authoring:compile": "node scripts/wiki-authoring-compile.js",
     "wiki:authoring:revision-plan": "node scripts/wiki-authoring-revision-plan.js",
     "wiki:sources:stage": "node scripts/wiki-source-stage.js stage",
-    "wiki:sources:import": "node scripts/wiki-source-import.js"
+    "wiki:sources:import": "node scripts/wiki-source-import.js",
+    "public:fetch": "node scripts/public-snapshot-fetch.js",
+    "public:sandbox": "node scripts/public-sandbox.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

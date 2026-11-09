@@ -212,7 +212,18 @@
       throw requestError(NETWORK_ERROR);
     }).then(function (response) {
       return parseJson(response).then(function (data) {
-        if (!response.ok) throw requestError(responseErrorMessage(data, response.status), { status: response.status, code: data && data.code });
+        if (!response.ok) {
+          if (response.status === 401 || (data && data.code === 'CSRF_INVALID')) {
+            invalidateCsrf();
+          }
+          if (response.status === 401) {
+            clearSessionUser();
+            if (root.dispatchEvent && typeof root.CustomEvent === 'function') {
+              root.dispatchEvent(new root.CustomEvent('aetherverse:session-expired'));
+            }
+          }
+          throw requestError(responseErrorMessage(data, response.status), { status: response.status, code: data && data.code });
+        }
         if (authEndpoint(verb, parsedUrl.pathname)) {
           invalidateCsrf();
           if (verb === 'POST' && parsedUrl.pathname === '/api/auth/logout') clearSessionUser();

@@ -5,6 +5,8 @@ const { ApiError, sendError } = require('./errors');
 const { validateUuid } = require('./validation');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_TURN_ID_LENGTH = 80;
+const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/;
 
 function publicNotification(n) {
   return {
@@ -20,10 +22,56 @@ function publicNotification(n) {
   };
 }
 
+function notificationLockKey(recipient, actor, type, referenceId) {
+  // PostgreSQL text parameters reject NUL bytes. Use the unit separator; a
+  // hash collision only serializes unrelated notifications, it does not merge
+  // their rows.
+  return [recipient, actor || '', type || '', referenceId || ''].join('\u001f');
+}
+
+async function performNotificationUpsert(executor, {
+  recipient, actor, safeType, safeRefId, safeRefType, safeTitle, safeMessage,
+}) {
+  // Serializa a checagem/inserção concorrente sem exigir uma restrição única nova.
+  // O lock é transacional e só permanece enquanto a transação do chamador durar.
+  await executor`SELECT pg_advisory_xact_lock(hashtext(${notificationLockKey(recipient, actor, safeType, safeRefId)}))`;
+
+  // Dedup: se já existe notificação não lida para este recipient, do mesmo actor, tipo e referência
+  const existing = await executor`
+    SELECT id FROM notifications
+    WHERE user_id = ${recipient}
+      AND actor_id IS NOT DISTINCT FROM ${actor}
+      AND type = ${safeType}
+      AND reference_id IS NOT DISTINCT FROM ${safeRefId}
+      AND read = false
+      AND created_at > now() - interval '24 hours'
+    LIMIT 1`;
+
+  if (existing.length > 0) {
+    const updated = await executor`
+      UPDATE notifications
+      SET title = ${safeTitle}, message = ${safeMessage}, created_at = now()
+      WHERE id = ${existing[0].id}
+      RETURNING *`;
+    return updated[0] ? publicNotification(updated[0]) : null;
+  }
+
+  const inserted = await executor`
+    INSERT INTO notifications (user_id, actor_id, type, reference_id, reference_type, title, message)
+    VALUES (${recipient}, ${actor}, ${safeType}, ${safeRefId}, ${safeRefType}, ${safeTitle}, ${safeMessage})
+    RETURNING *`;
+  return inserted[0] ? publicNotification(inserted[0]) : null;
+}
+
 /**
  * Cria ou atualiza uma notificação com proteção anti-spam (dedup).
  * Se o usuário já tiver uma notificação recente não lida do mesmo ator/tipo/referência,
  * apenas renova o timestamp em vez de criar linhas duplicadas.
+ *
+ * O trabalho roda em um savepoint quando o executor oferece um, de modo que uma
+ * falha de notificação não aborta a transação que gravou o conteúdo principal.
+ * Executores simples (sem savepoint) continuam recebendo a tentativa direta e o
+ * erro é apenas registrado, como antes.
  */
 async function createNotification(executor, { recipientId, actorId, type, referenceId, referenceType, title, message }) {
   if (!recipientId || String(recipientId) === String(actorId)) return null;
@@ -34,37 +82,78 @@ async function createNotification(executor, { recipientId, actorId, type, refere
   const safeRefType = referenceType ? String(referenceType).slice(0, 40) : null;
   const safeTitle = String(title || 'Notificação').slice(0, 200);
   const safeMessage = String(message || '').slice(0, 1000);
+  const work = {
+    recipient, actor, safeType, safeRefId, safeRefType, safeTitle, safeMessage,
+  };
 
   try {
-    // Dedup: se já existe notificação não lida para este recipient, do mesmo actor, tipo e referência
-    const existing = await executor`
-      SELECT id FROM notifications
-      WHERE user_id = ${recipient}
-        AND actor_id IS NOT DISTINCT FROM ${actor}
-        AND type = ${safeType}
-        AND reference_id IS NOT DISTINCT FROM ${safeRefId}
-        AND read = false
-        AND created_at > now() - interval '24 hours'
-      LIMIT 1`;
-
-    if (existing.length > 0) {
-      const updated = await executor`
-        UPDATE notifications
-        SET title = ${safeTitle}, message = ${safeMessage}, created_at = now()
-        WHERE id = ${existing[0].id}
-        RETURNING *`;
-      return updated[0] ? publicNotification(updated[0]) : null;
+    let result = null;
+    if (executor && typeof executor.savepoint === 'function') {
+      await executor.savepoint(async function (savepointExecutor) {
+        result = await performNotificationUpsert(savepointExecutor || executor, work);
+      });
+    } else {
+      result = await performNotificationUpsert(executor, work);
     }
-
-    const inserted = await executor`
-      INSERT INTO notifications (user_id, actor_id, type, reference_id, reference_type, title, message)
-      VALUES (${recipient}, ${actor}, ${safeType}, ${safeRefId}, ${safeRefType}, ${safeTitle}, ${safeMessage})
-      RETURNING *`;
-    return inserted[0] ? publicNotification(inserted[0]) : null;
+    return result;
   } catch (err) {
-    console.warn('createNotification aviso:', err.message);
+    console.warn('createNotification aviso:', err && err.message ? err.message : err);
     return null;
   }
+}
+
+function validateTurnId(value) {
+  const rawTurnId = String(value || '');
+  if (!rawTurnId || rawTurnId.length > MAX_TURN_ID_LENGTH || CONTROL_CHARACTERS.test(rawTurnId)) {
+    throw new ApiError(400, 'INVALID_TURN_ID', 'Identificador de turno inválido.');
+  }
+  return rawTurnId;
+}
+
+function sceneScopedTurnKey(sceneId, rawTurnId) {
+  return `${sceneId}:${rawTurnId}`;
+}
+
+/**
+ * Resolve o identificador de um turno para a chave canônica usada em `likes`.
+ * Turnos persistidos em `scene_turns` usam o UUID global da linha; turnos que
+ * existem apenas no JSON da cena usam uma chave limitada à cena para evitar
+ * colisão entre ids legados repetidos em cenas diferentes.
+ */
+async function resolveTurnLikeTarget(executor, sceneId, rawTurnId, sceneRow) {
+  const isUuid = UUID_RE.test(rawTurnId);
+  const rows = isUuid
+    ? await executor`SELECT id, legacy_id, author_id FROM scene_turns WHERE scene_id = ${sceneId} AND (id = ${rawTurnId.toLowerCase()} OR legacy_id = ${rawTurnId}) AND deleted_at IS NULL LIMIT 1`
+    : await executor`SELECT id, legacy_id, author_id FROM scene_turns WHERE scene_id = ${sceneId} AND legacy_id = ${rawTurnId} AND deleted_at IS NULL LIMIT 1`;
+
+  if (rows.length > 0) {
+    return {
+      key: String(rows[0].id),
+      turnAuthorId: rows[0].author_id || null,
+      source: 'scene_turn',
+    };
+  }
+
+  let scene = sceneRow;
+  if (!scene) {
+    const sceneRows = await executor`SELECT turns FROM wiki_posts WHERE id = ${sceneId} AND hidden_at IS NULL LIMIT 1`;
+    scene = sceneRows[0] || null;
+  }
+
+  if (scene && Array.isArray(scene.turns)) {
+    const found = scene.turns.find(function (turn) {
+      return String(turn && turn.id) === rawTurnId;
+    });
+    if (found) {
+      return {
+        key: sceneScopedTurnKey(sceneId, rawTurnId),
+        turnAuthorId: found.authorId || null,
+        source: 'json_turn',
+      };
+    }
+  }
+
+  return null;
 }
 
 function createInteractionsRouter({ sql, auth }) {
@@ -295,40 +384,21 @@ function createInteractionsRouter({ sql, auth }) {
   router.post('/api/wiki-posts/:id/turns/:turnId/like', auth.requireIdentity, async function (req, res) {
     try {
       const sceneId = validateUuid(req.params.id);
-      const rawTurnId = String(req.params.turnId || '');
-      if (!rawTurnId || rawTurnId.length > 80 || /[\u0000-\u001f\u007f]/.test(rawTurnId)) {
-        throw new ApiError(400, 'INVALID_TURN_ID', 'Identificador de turno inválido.');
-      }
+      const rawTurnId = validateTurnId(req.params.turnId);
 
       const result = await auth.withActorTransaction(req, async (tx, user) => {
         const sceneRows = await tx`SELECT id, author_id, titulo, turns FROM wiki_posts WHERE id = ${sceneId} AND hidden_at IS NULL LIMIT 1`;
         if (sceneRows.length === 0) throw new ApiError(404, 'NOT_FOUND', 'Cena não encontrada.');
         const scene = sceneRows[0];
 
-        // Tenta encontrar turno em scene_turns (UUID ou legacy_id)
-        let turnAuthorId = null;
-        let canonicalTurnId = rawTurnId;
-
-        const isUuid = UUID_RE.test(rawTurnId);
-        const stRows = isUuid
-          ? await tx`SELECT id, legacy_id, author_id FROM scene_turns WHERE scene_id = ${sceneId} AND (id = ${rawTurnId.toLowerCase()} OR legacy_id = ${rawTurnId}) AND deleted_at IS NULL LIMIT 1`
-          : await tx`SELECT id, legacy_id, author_id FROM scene_turns WHERE scene_id = ${sceneId} AND legacy_id = ${rawTurnId} AND deleted_at IS NULL LIMIT 1`;
-
-        if (stRows.length > 0) {
-          turnAuthorId = stRows[0].author_id;
-          canonicalTurnId = stRows[0].legacy_id || String(stRows[0].id);
-        } else if (Array.isArray(scene.turns)) {
-          // Fallback para turns em JSON
-          const found = scene.turns.find(function (t) { return String(t && t.id) === rawTurnId; });
-          if (!found) throw new ApiError(404, 'NOT_FOUND', 'Turno não encontrado.');
-          turnAuthorId = found.authorId || null;
-        } else {
-          throw new ApiError(404, 'NOT_FOUND', 'Turno não encontrado.');
-        }
+        const target = await resolveTurnLikeTarget(tx, sceneId, rawTurnId, scene);
+        if (!target) throw new ApiError(404, 'NOT_FOUND', 'Turno não encontrado.');
+        const likeKey = target.key;
+        const turnAuthorId = target.turnAuthorId;
 
         const existing = await tx`
           SELECT id FROM likes
-          WHERE user_id = ${user.id} AND target_type = 'turn' AND target_id = ${rawTurnId}
+          WHERE user_id = ${user.id} AND target_type = 'turn' AND target_id = ${likeKey}
           LIMIT 1`;
 
         let liked = false;
@@ -338,7 +408,7 @@ function createInteractionsRouter({ sql, auth }) {
         } else {
           await tx`
             INSERT INTO likes (user_id, target_type, target_id)
-            VALUES (${user.id}, 'turn', ${rawTurnId})
+            VALUES (${user.id}, 'turn', ${likeKey})
             ON CONFLICT (user_id, target_type, target_id) DO NOTHING`;
           liked = true;
 
@@ -357,7 +427,7 @@ function createInteractionsRouter({ sql, auth }) {
 
         const countRows = await tx`
           SELECT COUNT(*)::integer AS cnt FROM likes
-          WHERE target_type = 'turn' AND target_id = ${rawTurnId}`;
+          WHERE target_type = 'turn' AND target_id = ${likeKey}`;
         return { liked, likeCount: countRows[0] ? countRows[0].cnt : 0 };
       });
 
@@ -370,17 +440,19 @@ function createInteractionsRouter({ sql, auth }) {
   // Contagem de curtidas para turno
   router.get('/api/wiki-posts/:id/turns/:turnId/likes', async function (req, res) {
     try {
-      const rawTurnId = String(req.params.turnId || '');
-      if (!rawTurnId || rawTurnId.length > 80) throw new ApiError(400, 'INVALID_TURN_ID', 'ID de turno inválido.');
+      const sceneId = validateUuid(req.params.id);
+      const rawTurnId = validateTurnId(req.params.turnId);
+      const target = await resolveTurnLikeTarget(sql, sceneId, rawTurnId);
+      const likeKey = target ? target.key : sceneScopedTurnKey(sceneId, rawTurnId);
 
       const countRows = await sql`
         SELECT COUNT(*)::integer AS cnt FROM likes
-        WHERE target_type = 'turn' AND target_id = ${rawTurnId}`;
+        WHERE target_type = 'turn' AND target_id = ${likeKey}`;
       let userLiked = false;
       if (req.session && req.session.userId) {
         const me = await sql`
           SELECT id FROM likes
-          WHERE user_id = ${req.session.userId} AND target_type = 'turn' AND target_id = ${rawTurnId}
+          WHERE user_id = ${req.session.userId} AND target_type = 'turn' AND target_id = ${likeKey}
           LIMIT 1`;
         userLiked = me.length > 0;
       }
@@ -397,4 +469,7 @@ module.exports = {
   createInteractionsRouter,
   createNotification,
   publicNotification,
+  resolveTurnLikeTarget,
+  sceneScopedTurnKey,
+  validateTurnId,
 };

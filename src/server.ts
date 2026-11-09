@@ -2,61 +2,22 @@
  * Aetherverse Vault — Servidor backend principal (TypeScript)
  *
  * Express + PostgreSQL (via `postgres` com prepare: false) + Drizzle schema
- * Integração robusta com a arquitetura modular:
- *  - Suporte completo a notificações (anti-spam, leitura, exclusão)
- *  - Sistema de curtidas (personagem, cena, turno com suporte a UUID e legacyId)
- *  - Validação estrita de tipos (postgres.Sql sem 'any')
- *  - Inicialização resiliente e encerramento gracioso (SIGINT/SIGTERM)
+ * Reutiliza o contrato de inicialização canônico de `server.js`:
+ *  - Verificação de migrações e colunas antes de criar o app
+ *  - Nenhum DDL ou seed em tempo de execução
+ *  - Encerramento gracioso (SIGINT/SIGTERM)
  */
 
 import 'dotenv/config';
 import path from 'path';
 import postgres, { Sql } from 'postgres';
 import { createApp } from '../server/app';
-import { ensureTimelineSchema } from '../server/timeline';
+import { verifySchemaReadiness } from '../server.js';
 import type { ServerConfig } from './types';
 
 export * from './types';
 
 const ROOT = path.resolve(__dirname, '..');
-
-/**
- * Garante idempotentemente a criação das tabelas e índices de interações (notificações e curtidas).
- */
-export async function ensureInteractionsSchema(sql: Sql): Promise<void> {
-  try {
-    await sql`
-      CREATE TABLE IF NOT EXISTS "notifications" (
-        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-        "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
-        "actor_id" uuid REFERENCES "users"("id") ON DELETE SET NULL,
-        "type" varchar(40) NOT NULL,
-        "reference_id" varchar(200),
-        "reference_type" varchar(40),
-        "title" varchar(200) NOT NULL,
-        "message" text DEFAULT '',
-        "read" boolean DEFAULT false NOT NULL,
-        "created_at" timestamp with time zone DEFAULT now() NOT NULL
-      )`;
-
-    await sql`CREATE INDEX IF NOT EXISTS "idx_notifications_user_id" ON "notifications" ("user_id")`;
-    await sql`CREATE INDEX IF NOT EXISTS "idx_notifications_user_read" ON "notifications" ("user_id", "read")`;
-
-    await sql`
-      CREATE TABLE IF NOT EXISTS "likes" (
-        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-        "user_id" uuid NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
-        "target_type" varchar(40) NOT NULL,
-        "target_id" varchar(200) NOT NULL,
-        "created_at" timestamp with time zone DEFAULT now() NOT NULL,
-        CONSTRAINT "likes_unique" UNIQUE ("user_id", "target_type", "target_id")
-      )`;
-
-    await sql`CREATE INDEX IF NOT EXISTS "idx_likes_target" ON "likes" ("target_type", "target_id")`;
-  } catch (err) {
-    console.warn('Aviso ao verificar schema de interações:', (err as Error).message);
-  }
-}
 
 /**
  * Lê e valida as configurações de ambiente de forma segura e amigável.
@@ -125,8 +86,12 @@ export async function startServer(options: { rootDirectory?: string; env?: NodeJ
     connection: { timezone: 'UTC' },
   });
 
-  await ensureInteractionsSchema(sql);
-  await ensureTimelineSchema(sql);
+  try {
+    await verifySchemaReadiness(sql, { rootDirectory });
+  } catch (error) {
+    await sql.end({ timeout: 5 }).catch(() => {});
+    throw error;
+  }
 
   const app = createApp({
     sql,
